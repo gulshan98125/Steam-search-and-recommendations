@@ -1,5 +1,5 @@
 from steam import app
-from flask import render_template, request
+from flask import render_template, request, jsonify
 import json
 import ast
 from .constants import *
@@ -9,6 +9,7 @@ conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.
 cur = conn.cursor()
 
 @app.route('/home')
+@app.route('/')
 def home():
 	try:
 		cur.execute("SELECT name,release_date,appid FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC limit 10")
@@ -42,7 +43,6 @@ def game_details():
 		variables = {}
 		cur.execute("SELECT detailed_description FROM games_description WHERE appid="+str(appid))
 		rows = cur.fetchall()
-		print("here1")
 		if len(rows)>0:
 			description = rows[0][0]
 		else:
@@ -55,7 +55,6 @@ def game_details():
 		else:
 			website = None
 			steam_page = None
-		print("here2")
 		cur.execute("SELECT pc_requirements,mac_requirements,linux_requirements FROM requirements WHERE appid="+str(appid))
 		rows = cur.fetchall()
 		if len(rows)>0:
@@ -78,7 +77,6 @@ def game_details():
 			windows_requirements = None
 			mac_requirements = None
 			linux_requirements = None
-		print("here3")
 		cur.execute("SELECT * FROM games WHERE appid="+str(appid))
 		rows = cur.fetchall()
 		if len(rows)>0:
@@ -112,7 +110,6 @@ def game_details():
 			variables["average_playtime"] =  None
 			variables["player_count"] =  None
 			variables["price"] = None
-		print("here4")
 		variables["description"] = description
 		variables["website"] = website
 		variables["steam_page"] = steam_page
@@ -175,3 +172,24 @@ def screenshots():
 	except Exception as e:
 		print(e)
 		return "EXCEPTION"
+
+@app.route('/search',methods=['POST'])
+def searchGame():
+	if request.method == 'POST':
+		string = request.form.get('string')
+		if string=="":
+			return json.dumps("")
+		string = string.lower() #to remove any caps problem
+		cur.execute("SELECT name,release_date,appid FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ string +"%' ORDER BY positive_ratings DESC, name ASC limit 10")
+		rows = cur.fetchall()
+		games = []
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["name"] = tup[0]
+				D["release_date"] = tup[1]
+				D["appid"] = tup[2]
+				games.append(D)
+		return json.dumps(games)
+	else:
+		return "Invalid Request"

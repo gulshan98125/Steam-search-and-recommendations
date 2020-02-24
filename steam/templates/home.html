@@ -1,8 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-	{% if games %}
-		{% for gameObj in games %}
-			<li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li>
-		{% endfor %}
-	{% endif %}
+	<style>
+	table, th, td {
+	  border: 1px solid black;
+	  border-collapse: collapse;
+	}
+	th, td {
+	  padding: 5px;
+	  text-align: left;    
+	}
+	</style>
+	  <input type="text" id="searchBar" name="fname" placeholder="search by name">
+	  <Button id="searchButton" onclick="search()"> Search </Button> <br>
+	<div id="table">
+		<table style="width:100%">
+			  <tr>
+			    <th>Game name</th>
+			    <th>Release date</th>
+			  </tr>
+			  {% if games %}
+			  	{% for gameObj in games %}
+			  		<tr>
+			  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
+			  		  <td>{{gameObj.release_date}}</td>
+			  		</tr>
+			  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
+			  	{% endfor %}
+			  {% endif %}
+		</table>
+	</div>
+
+	<script type="text/javascript">
+		
+		function search(){
+			$.post("/search",
+			 {
+			   string: $("#searchBar").val()
+			 },
+			 function(data, status){
+			 	var obj = JSON.parse(data);
+			 	var newtable = "<table style=\"width:100%\"> <tr> <th>Game name</th> <th>Release date</th> </tr>";
+			 	for(let i=0;i<obj.length;i++){
+			 		let s = "<tr><td>";
+			 		s += obj[i]['name'] +"</td><td>"
+			 		s += obj[i]['release_date']+"</td></tr>"
+			 		newtable+=s;
+			 	}
+			 	document.getElementById("table").innerHTML = newtable;
+			 	console.log(newtable);
+			 });
+		}
+
+	</script>
 {% endblock %}

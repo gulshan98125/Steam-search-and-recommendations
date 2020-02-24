@@ -10,8 +10,8 @@
 	  text-align: left;    
 	}
 	</style>
-	<button onclick="prev()">previous</button>
-	<button onclick="next()">next</button>
+	<button onclick="prev()">previous page</button>
+	<button onclick="next()">next page</button>
 	<table style="width:100%">
 		  <tr>
 		    <th>User Name</th>
@@ -43,7 +43,7 @@
 		}
 		var pageNum = getUrlVars()["page_num"];
 		function prev(){
-			if(pageNum>0){
+			if(pageNum>1){
 				pageNum--;
 				location.href = "/reviews?appid={{appid}}&page_num="+pageNum;
 			}
