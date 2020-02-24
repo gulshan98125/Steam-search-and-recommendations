@@ -12,7 +12,7 @@ cur = conn.cursor()
 @app.route('/')
 def home():
 	try:
-		cur.execute("SELECT name,release_date,appid FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC limit 10")
+		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY ");
 		rows = cur.fetchall()
 		games = []
 		if len(rows)>0:
@@ -21,8 +21,15 @@ def home():
 				D["name"] = tup[0]
 				D["release_date"] = tup[1]
 				D["appid"] = tup[2]
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
 				games.append(D)
-		return render_template('home.html', user="DEFAULT",games = games)
+		cur.execute("SELECT count(*) from games")
+		rows = cur.fetchall()
+		if len(rows)>0:
+			totalRows = rows[0][0]
+		else:
+			totalRows = 0
+		return render_template('home.html', user="DEFAULT",games = games, totalRows=totalRows)
 	except Exception as e:
 		print(e)
 		return ""
@@ -102,8 +109,8 @@ def game_details():
 			variables["developer"] = None
 			variables["platforms"] = None
 			variables["required_age"] = None
-			variables["genres"] = None
-			variables["tags"] = None
+			variables["genres"] = None # ; seperated
+			variables["tags"] = None # ; seperated
 			variables["achievements "] =  None
 			variables["positive_ratings"] =  None
 			variables["negative_ratings"] =  None
@@ -173,14 +180,16 @@ def screenshots():
 		print(e)
 		return "EXCEPTION"
 
-@app.route('/search',methods=['POST'])
-def searchGame():
+@app.route('/searchGames',methods=['POST'])
+def searchGames():
 	if request.method == 'POST':
-		string = request.form.get('string')
-		if string=="":
-			return json.dumps("")
-		string = string.lower() #to remove any caps problem
-		cur.execute("SELECT name,release_date,appid FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ string +"%' ORDER BY positive_ratings DESC, name ASC limit 10")
+		searchString = request.form.get('string')
+		page_num = request.form.get('page_num')
+		if searchString=="" or page_num=="" or int(page_num)<=0:
+			return json.dumps("[]")
+		page_num = int(page_num)
+		searchString = searchString.lower() #to remove any caps problem
+		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ");
 		rows = cur.fetchall()
 		games = []
 		if len(rows)>0:
@@ -189,6 +198,36 @@ def searchGame():
 				D["name"] = tup[0]
 				D["release_date"] = tup[1]
 				D["appid"] = tup[2]
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				games.append(D)
+		#for counting total matching games
+		cur.execute("SELECT count(*) from games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%'")
+		rows = cur.fetchall()
+		if len(rows)>0:
+			totalRows = rows[0][0]
+		else:
+			totalRows = 0
+		games.append({"totalRows": totalRows}) #last object becomes totalRows
+		return json.dumps(games)
+	else:
+		return "Invalid Request"
+
+@app.route('/getGames',methods=['POST'])
+def getGames():
+	if request.method == 'POST':
+		page_num = request.form.get('page_num')
+		if int(page_num)<=0:
+			return json.dumps("[]")
+		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ");
+		rows = cur.fetchall()
+		games = []
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["name"] = tup[0]
+				D["release_date"] = tup[1]
+				D["appid"] = tup[2]
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
 				games.append(D)
 		return json.dumps(games)
 	else:

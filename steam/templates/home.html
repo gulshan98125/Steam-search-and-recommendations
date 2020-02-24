@@ -12,17 +12,24 @@
 	</style>
 	  <input type="text" id="searchBar" name="fname" placeholder="search by name">
 	  <Button id="searchButton" onclick="search()"> Search </Button> <br>
+	<br>
+	{% set rows = (totalRows/10)|round|int %}
+	<div id="pageInfo"> Showing page 1 of {{rows}}</div>
+	<button onclick="prev()"> previous page </button>
+	<button onclick="next()"> next page </button> <br>
 	<div id="table">
 		<table style="width:100%">
 			  <tr>
 			    <th>Game name</th>
 			    <th>Release date</th>
+			    <th>Price</th>
 			  </tr>
 			  {% if games %}
 			  	{% for gameObj in games %}
 			  		<tr>
 			  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
 			  		  <td>{{gameObj.release_date}}</td>
+			  		  <td>{{gameObj.price}}</td>
 			  		</tr>
 			  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
 			  	{% endfor %}
@@ -31,24 +38,104 @@
 	</div>
 
 	<script type="text/javascript">
-		
+		var page_num = 1;
+		var totalPages = {{rows}};
+		var isSearched = false;
+
+
+		function searchResponseHandler(data, status){
+			if(status==='success'){
+				isSearched = true;
+				var obj = JSON.parse(data);
+				var newtable = "<table style=\"width:100%\"> <tr> <th>Game name</th> <th>Release date</th> <th>Price</th> </tr>";
+				for(let i=0;i<obj.length-1;i++){
+					let s = "<tr><td>";
+					s += "<a href=\"/game_details?appid="+obj[i]['appid']+"\">"+obj[i]['name']+"</a>"+"</td><td>"
+					s += obj[i]['release_date']+"</td> <td>"
+					s += obj[i]['price']+"</td></tr>"
+					newtable+=s;
+				}
+				total_rows = obj[obj.length-1]['totalRows']; //last object contains totalrows
+				totalPages = parseInt(parseInt(total_rows)/10);
+				document.getElementById("table").innerHTML = newtable;
+				document.getElementById("pageInfo").innerHTML = "Showing page "+page_num+" of "+ totalPages;
+			}
+		}
+
+		function getGamesResponseHandler(data,status){
+			if(status==='success'){
+				var obj = JSON.parse(data);
+				var newtable = "<table style=\"width:100%\"> <tr> <th>Game name</th> <th>Release date</th> <th>Price</th> </tr>";
+				for(let i=0;i<obj.length;i++){
+					let s = "<tr><td>";
+					s += "<a href=\"/game_details?appid="+obj[i]['appid']+"\">"+obj[i]['name']+"</a>"+"</td><td>"
+					s += obj[i]['release_date']+"</td> <td>"
+					s += obj[i]['price']+"</td></tr>"
+					newtable+=s;
+				}
+				document.getElementById("table").innerHTML = newtable;
+				document.getElementById("pageInfo").innerHTML = "Showing page "+page_num+" of "+ totalPages;
+			}
+		}
+
 		function search(){
-			$.post("/search",
+			if($("#searchBar").val()==''){
+				return;
+			}
+			page_num = 1; //reset the page number in case of search
+			$.post("/searchGames",
 			 {
-			   string: $("#searchBar").val()
+			 	page_num: page_num,
+			   	string: $("#searchBar").val()
 			 },
 			 function(data, status){
-			 	var obj = JSON.parse(data);
-			 	var newtable = "<table style=\"width:100%\"> <tr> <th>Game name</th> <th>Release date</th> </tr>";
-			 	for(let i=0;i<obj.length;i++){
-			 		let s = "<tr><td>";
-			 		s += obj[i]['name'] +"</td><td>"
-			 		s += obj[i]['release_date']+"</td></tr>"
-			 		newtable+=s;
-			 	}
-			 	document.getElementById("table").innerHTML = newtable;
-			 	console.log(newtable);
+			 	searchResponseHandler(data,status);
 			 });
+		}
+		function prev(){
+			if(page_num>1){
+				page_num--;
+				var URL = "/getGames";
+				if(isSearched){
+					URL = "/searchGames"
+				}
+				$.post(URL,
+				 {
+				   page_num: page_num,
+				   string: $("#searchBar").val()
+				 },
+				 function(data, status){
+				 	if(isSearched){
+				 		searchResponseHandler(data,status);
+				 	}
+				 	else{
+				 		getGamesResponseHandler(data,status);
+				 	}
+				 });
+			}
+		}
+
+		function next(){
+			if(page_num+1<=totalPages){
+				page_num++;
+				var URL = "/getGames";
+				if(isSearched){
+					URL = "/searchGames"
+				}
+				$.post(URL,
+					 {
+					   page_num: page_num,
+					   string: $("#searchBar").val()
+					 },
+					 function(data, status){
+					 	if(isSearched){
+					 		searchResponseHandler(data,status);
+					 	}
+					 	else{
+					 		getGamesResponseHandler(data,status);
+					 	}
+					 });
+			}
 		}
 
 	</script>
