@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+	{% if games %}
+		{% for gameObj in games %}
+			<li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li>
+		{% endfor %}
+	{% endif %}
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+	<h1> Game : {{vars.name}} </h1>
+
+	<button onclick="window.open('/reviews?appid={{vars.appid}}&page_num=1')"> Reviews </button>
+	<button onclick="window.open('/screenshots?appid={{vars.appid}}')"> Screenshots </button>
+	{% if vars.website %}
+	<button onclick="window.open('{{vars.website}}')"> website </button>
+	{% endif %}
+	{% if vars.steam_page %}
+	<button onclick="window.open('{{vars.steam_page}}')"> steam page </button>
+	{% endif %}
+	<button> write review </button>
+
+	{% if vars.description %}
+		<h1> Description: </h1>
+		<div style="height: 400px; overflow: scroll; background-color: #AAFFF0"> 
+			<div> {{vars.description | safe}} </div>
+		</div>
+		
+	{% endif %}
+
+	{% if vars.windows_requirements or vars.mac_requirements or vars.linux_requirements %}
+		<h1> Requirements: </h1>
+		<div style="height: 400px; overflow: scroll; background-color: #ACFF92">
+			{% if vars.windows_requirements %}
+			<h2> Windows: </h2>
+			{{vars.windows_requirements | safe}}
+			{% endif %}
+			{% if vars.mac_requirements %}
+			<h2> Mac: </h2>
+			{{vars.mac_requirements | safe}}
+			{% endif %}
+			{% if vars.linux_requirements %}
+			<h2> Linux: </h2>
+			{{vars.linux_requirements | safe}}
+			{% endif %}
+		</div>
+		
+	{% endif %}
+
+	{% if vars.tags %}
+		<h1> Tags: </h1>
+		{% for tag in vars.tags %}
+			{{tag}} ,
+		{% endfor %}
+	{% endif %}
+<!-- 
+    <h1>Hi, {{ user.username }}!</h1>
+    {% for post in posts %}
+    <div><p>{{ post.author.username }} says: <b>{{ post.body }}</b></p></div>
+    {% endfor %} -->
+{% endblock %}

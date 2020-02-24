@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+	<style>
+	table, th, td {
+	  border: 1px solid black;
+	  border-collapse: collapse;
+	}
+	th, td {
+	  padding: 5px;
+	  text-align: left;    
+	}
+	</style>
+	<table align="center">
+	{% if screenshots %}
+		  {% for SSObj in screenshots %}
+		  	<tr>
+		  		<td>
+		  			<a href="{{SSObj.path_full}}"> <img src="{{SSObj.path_thumbnail}}"> </a>
+		  		</td>
+		  	</tr>
+		  {% endfor %}
+	{% endif %}
+	</table>
+{% endblock %}
+

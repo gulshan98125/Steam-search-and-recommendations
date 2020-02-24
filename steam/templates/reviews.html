@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+	<style>
+	table, th, td {
+	  border: 1px solid black;
+	  border-collapse: collapse;
+	}
+	th, td {
+	  padding: 5px;
+	  text-align: left;    
+	}
+	</style>
+	<button onclick="prev()">previous</button>
+	<button onclick="next()">next</button>
+	<table style="width:100%">
+		  <tr>
+		    <th>User Name</th>
+		    <th>Review</th>
+		    <th>Found funny</th>
+		    <th>Hours</th>
+		    <th>Date</th>
+		  </tr>
+	{% if reviews %}
+		  {% for revObj in reviews %}
+		  	<tr>
+		  	  <td>{{revObj.username}}</td>
+		  	  <td>{{revObj.review}}</td>
+		  	  <td>{{revObj.found_funny}}</td>
+		  	  <td>{{revObj.hours}}</td>
+		  	  <td>{{revObj.date}}</td>
+		  	</tr>
+		  {% endfor %}
+	{% endif %}
+	</table>
+
+	<script type="text/javascript">
+		function getUrlVars() {
+		    var vars = {};
+		    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+		        vars[key] = value;
+		    });
+		    return vars;
+		}
+		var pageNum = getUrlVars()["page_num"];
+		function prev(){
+			if(pageNum>0){
+				pageNum--;
+				location.href = "/reviews?appid={{appid}}&page_num="+pageNum;
+			}
+		}
+
+		function next(){
+			pageNum++;
+			location.href = "/reviews?appid={{appid}}&page_num="+pageNum;
+		}
+	</script>
+{% endblock %}
+
