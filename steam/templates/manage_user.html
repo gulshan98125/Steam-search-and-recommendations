@@ -3,7 +3,7 @@
 {% block content %}
 	<style type="text/css">
 		/* Popup box BEGIN */
-		.addMoneyPopup{
+		.open_addMoneyPopup{
 		    background:rgba(0,0,0,.4);
 		    cursor:pointer;
 		    display:none;
@@ -14,12 +14,12 @@
 		    width:100%;
 		    z-index:10000;
 		}
-		.addMoneyPopup .helper{
+		.open_addMoneyPopup .helper{
 		    display:inline-block;
 		    height:100%;
 		    vertical-align:middle;
 		}
-		.addMoneyPopup > div {
+		.open_addMoneyPopup > div {
 		    background-color: #fff;
 		    box-shadow: 10px 10px 60px #555;
 		    display: inline-block;
@@ -78,7 +78,7 @@
 			  		  {% else %}
 			  		  	<td> <button style="color: red" onclick="banfunc({{userObj.username}})"> ban </button> </td>
 			  		  {% endif %}
-			  		  <td> <button onclick="addMoneyPopup({{userObj.username}})"> Add money </button> </td>
+			  		  <td> <button onclick="open_addMoneyPopup({{userObj.username}})"> Add money </button> </td>
 			  		</tr>
 			  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
 			  	{% endfor %}
@@ -86,10 +86,10 @@
 		</table>
 	</div>
 
-	<div class="addMoneyPopup">
+	<div class="open_addMoneyPopup">
 	    <span class="helper"></span>
 	    <div>
-	        <div class="popupCloseButton">&times;</div>
+	        <div class="popupCloseButton" onclick="close_addMoneyPopup()">&times;</div>
 	        <div id="popupContent"> <input id="moneyVal" type="text" name="money" placeholder="amount to add"> <button onclick="addMoney()">Add money</button> </div>
 	    </div>
 	</div>
@@ -124,9 +124,9 @@
 			}
 		}
 
-		function addMoneyPopup(username){
+		function open_addMoneyPopup(username){
 			clickedUser = username; //update username
-			$('.addMoneyPopup').show();
+			$('.open_addMoneyPopup').show();
 		}
 
 		function addMoney(){
@@ -148,10 +148,9 @@
 			 	}
 			 });
 		}
-
-		$('.popupCloseButton').click(function(){
-		        $('.addMoneyPopup').hide();
-		    });
+		function close_addMoneyPopup(){
+			$('.open_addMoneyPopup').hide();
+		}
 
 	</script>
 {% endblock %}

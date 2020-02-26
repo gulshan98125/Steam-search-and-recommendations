@@ -253,6 +253,7 @@ def manageUser():
 		userslist.append(userObj)
 	render_template('manage_user.html',user="DEFAULT", userslist = userslist)
 
+
 @app.route('/banUser', methods=['POST'])
 def banUser():
 	#only when the request is made by admin
@@ -260,9 +261,12 @@ def banUser():
 		username = request.form.get('username')
 		username = str(username)
 		cur.execute("UPDATE users SET isbanned=true WHERE username='"+username+"'")
+		conn.commit()
 		rows = curr.fetchall()
 		print("rows for UPDATE banned", rows)
 		return "successfully banned user "+ username
+	else:
+		return "Bad request"
 
 @app.route('/unbanUser', methods=['POST'])
 def unbanUser():
@@ -271,9 +275,12 @@ def unbanUser():
 		username = request.form.get('username')
 		username = str(username)
 		cur.execute("UPDATE users SET isbanned=false WHERE username='"+username+"'")
+		conn.commit()
 		rows = curr.fetchall()
 		print("rows for UPDATE unbanned", rows)
 		return "unbanned user "+ username
+	else:
+		return "Bad request"
 
 @app.route('/addMoney', methods=['POST'])
 def addMoney():
@@ -284,6 +291,48 @@ def addMoney():
 		username = str(username)
 		amount = float(amount)
 		cur.execute("UPDATE wallet SET money = money+"+str(amount)+" WHERE username="+username)
+		conn.commit()
 		rows = curr.fetchall()
 		print("rows for UPDATE wallet", rows)
 		return "added money to wallet of user "+ username
+	else:
+		return "Bad request"
+
+
+@app.route('/addGame', methods=['POST'])
+def addGame():
+	#only admin can call this function
+	if request.method == 'POST':
+		name = request.form.get('name')
+		release_date = request.form.get('release_date')
+		developers = request.form.get('developers')
+		publishers = request.form.get('publishers')
+		platforms = request.form.get('platforms')
+		required_age = request.form.get('required_age')
+		categories = request.form.get('categories')
+		genres = request.form.get('genres')
+		tags = request.form.get('tags')
+		achievements = request.form.get('achievements')
+		price = request.form.get('price')
+		cur.execute("SELECT MAX(appid) from games");
+		rows = cur.fetchall()
+		appidmax = int(rows[0][0])
+		newappid = appidmax+1
+		cur.execute(
+					'''
+					INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
+					VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
+					'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
+						genres=genres,tags=tags,achievements=achievements,price=price)
+					)
+		conn.commit()
+		rows = cur.fetchall()
+		print("rows for INSERTING game", rows)
+		return "added game "+name
+	else:
+		return "Bad request"
+
+
+@app.route('/admin')
+def admin():
+	return render_template('admin_page.html',user="DEFAULT")
