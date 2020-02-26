@@ -70,17 +70,18 @@
 	    <div>
 	        <div class="popupCloseButton" onclick="close_popup()">&times;</div>
 	        <div id="popupContent">
-	        	<input type="text" id="name" name="name" placeholder="Game name"><br>
-  Release date: <input type="date" id="release_date" name="release_date"> <br>
-	        	<input type="text" id="developers" name="developers" placeholder="Developers ( ; seperated)"><br>
-	        	<input type="text" id="publishers" name="publishers" placeholder="publishers ( ; seperated)"><br>
-	        	<input type="text" id="platforms" name="platforms" placeholder="Platforms ( ; seperated)"><br>
-	        	<input type="text" id="required_age" name="required_age" placeholder="Required Age (integer)"><br>
-	        	<input type="text" id="categories" name="categories" placeholder="Categories ( ; seperated)"><br>
-	        	<input type="text" id="genres" name="genres" placeholder="Genres ( ; seperated)"><br>
-	        	<input type="text" id="tags" name="tags" placeholder="Tags ( ; seperated)"><br>
-	        	<input type="text" id="achievements" name="achievements" placeholder="Achievements (integer)"><br>
-	        	<input type="text" id="price" name="price" placeholder="Price (in INR)"><br>
+	        	Game name: <input type="text" id="name" name="name" placeholder="Game name"><br>
+	        	Description: <textarea id="description" rows="4" cols="20">  </textarea><br>
+ 				Release date: <input type="date" id="release_date" name="release_date"> <br>
+	        	Developers: <input type="text" id="developers" name="developers" placeholder=" ; seperated"><br>
+	        	Publishers: <input type="text" id="publishers" name="publishers" placeholder=" ; seperated"><br>
+	        	Platforms: <input type="text" id="platforms" name="platforms" placeholder=" ; seperated"><br>
+	        	Required Age: <input type="text" id="required_age" name="required_age" placeholder=" Integer"><br>
+	        	Categories:<input type="text" id="categories" name="categories" placeholder=" ; seperated"><br>
+	        	Genres: <input type="text" id="genres" name="genres" placeholder=" ; seperated"><br>
+	        	Tags: <input type="text" id="tags" name="tags" placeholder=" ; seperated"><br>
+	        	Achievements: <input type="text" id="achievements" name="achievements" placeholder=" Integer"><br>
+	        	Price: <input type="text" id="price" name="price" placeholder=" in INR"><br>
 	        	<button onclick="addGameRequest()"> Add game </button>
 	        </div>
 	    </div>
@@ -99,6 +100,7 @@
 			 {
 			 	name: $("#name").val(),
 			 	release_date: $("#release_date").val(),
+			 	description: $("#description").val(),
 			 	developers: $("#developers").val(),
 			 	publishers: $("#publishers").val(),
 			 	platforms: $("#platforms").val(),
@@ -111,7 +113,9 @@
 			 },
 			 function(data, status){
 			 	if(status=='success'){
-			 		alert(data);
+			 		if(confirm(data)){
+			 		    window.location.reload();  
+			 		}
 			 	}
 			 });
 		}
