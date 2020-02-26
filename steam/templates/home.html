@@ -82,7 +82,7 @@
 		    <div>
 		        <div class="popupCloseButton" onclick="close_popup()">&times;</div>
 		        <div id="popupContent">
-		        	Game name: <input type="text" id="name" name="name" placeholder="Game name"><br>
+		        	Game name: <input type="text" id="name" name="name"><br>
 		        	Description: <textarea id="description" rows="4" cols="20">  </textarea><br>
 	 				Release date: <input type="date" id="release_date" name="release_date"> <br>
 		        	Developers: <input type="text" id="developers" name="developers" placeholder=" ; seperated"><br>
@@ -297,7 +297,7 @@
 					 	appid: appid
 					 },
 					 function(data, status){
-					 	if(confirm(status)){
+					 	if(confirm(data)){
 					 	    window.location.reload();  
 					 	}
 					 });

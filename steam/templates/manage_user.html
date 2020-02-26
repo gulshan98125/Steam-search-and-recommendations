@@ -2,6 +2,14 @@
 {% extends "base.html" %}
 {% block content %}
 	<style type="text/css">
+		table, th, td {
+		  border: 1px solid black;
+		  border-collapse: collapse;
+		}
+		th, td {
+		  padding: 5px;
+		  text-align: left;    
+		}
 		/* Popup box BEGIN */
 		.open_addMoneyPopup{
 		    background:rgba(0,0,0,.4);
@@ -25,7 +33,7 @@
 		    display: inline-block;
 		    height: auto;
 		    max-width: 551px;
-		    min-height: 100px;
+		    min-height: 50px;
 		    vertical-align: middle;
 		    width: 60%;
 		    position: relative;
@@ -66,21 +74,20 @@
 		<table style="width:100%">
 			  <tr>
 			    <th>Username</th>
-			    <th>Add money</th>
+			    <th>Add money to wallet</th>
 			    <th>Ban/Unban</th>
 			  </tr>
 			  {% if userslist %}
 			  	{% for userObj in userslist %}
 			  		<tr>
 			  		  <td> {{userObj.username}} </td>
+			  		  <td> <button onclick="open_addMoneyPopup('{{userObj.username}}')"> Add money </button> </td>
 			  		  {% if userObj.isbanned == 'true' %}
-			  		  	<td> <button style="color: yellow" onclick="unbanfunc({{userObj.username}})"> unban </button> </td>
+			  		  	<td> <button style="color: green" onclick="unbanfunc('{{userObj.username}}')"> unban </button> </td>
 			  		  {% else %}
-			  		  	<td> <button style="color: red" onclick="banfunc({{userObj.username}})"> ban </button> </td>
+			  		  	<td> <button style="color: red" onclick="banfunc('{{userObj.username}}')"> ban </button> </td>
 			  		  {% endif %}
-			  		  <td> <button onclick="open_addMoneyPopup({{userObj.username}})"> Add money </button> </td>
 			  		</tr>
-			  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
 			  	{% endfor %}
 			  {% endif %}
 		</table>
@@ -90,7 +97,10 @@
 	    <span class="helper"></span>
 	    <div>
 	        <div class="popupCloseButton" onclick="close_addMoneyPopup()">&times;</div>
-	        <div id="popupContent"> <input id="moneyVal" type="text" name="money" placeholder="amount to add"> <button onclick="addMoney()">Add money</button> </div>
+	        <div id="popupContent"> 
+	        	Current wallet balance: <div id="walletBalance">Unable to fetch</div> <br>
+	        	<input id="moneyVal" type="text" name="money" placeholder="amount to add"> <button onclick="addMoney()">Add money</button> 
+	        </div>
 	    </div>
 	</div>
 
@@ -104,49 +114,57 @@
 			 	username: username
 			 },
 			 function(data, status){
-			 	if(confirm(status)){
+			 	if(confirm(data)){
 			 	    window.location.reload();  
 			 	}
 			 });
 		}
 
 		function unbanfunc(username){
-			function banfunc(username){
 				$.post("/unbanUser",
 				 {
 				 	username: username
 				 },
 				 function(data, status){
-				 	if(confirm(status)){
+				 	if(confirm(data)){
 				 	    window.location.reload();  
 				 	}
 				 });
-			}
 		}
 
 		function open_addMoneyPopup(username){
+			//get the current wallet balance of this user using post request
 			clickedUser = username; //update username
-			$('.open_addMoneyPopup').show();
+			$.post("/getMoneyOfUser",
+			 {
+			 	username: clickedUser
+			 },
+			 function(data, status){
+			 	if(status==='success'){
+			 		document.getElementById("walletBalance").innerHTML = data;
+			 		$('.open_addMoneyPopup').show();
+			 	}
+			 });
 		}
 
 		function addMoney(){
 			//adds money to the user assigned to the current
 			//username variable
-			if($('#moneyVal').val().match(/^[0-9]+$/)===null ) {
+			if($('#moneyVal').val().match(/^\d+(\.\d+)?$/)===null ) {
 				//when string is not number
 				alert("enter valid money");
+			}else{
+				$.post("/addMoney",
+				 {
+				 	username: clickedUser,
+				 	amount: $('#moneyVal').val()
+				 },
+				 function(data, status){
+				 	if(confirm(data)){
+				 	    window.location.reload();  
+				 	}
+				 });
 			}
-
-			$.post("/addMoney",
-			 {
-			 	username: clickedUser,
-			 	amount: $('#moneyVal').val()
-			 },
-			 function(data, status){
-			 	if(confirm(status)){
-			 	    window.location.reload();  
-			 	}
-			 });
 		}
 		function close_addMoneyPopup(){
 			$('.open_addMoneyPopup').hide();

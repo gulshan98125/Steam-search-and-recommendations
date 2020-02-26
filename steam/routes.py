@@ -36,11 +36,9 @@ def home():
 		print("home",e)
 		return "Some error occured"
 
-
 @app.route('/login')
 def login():
 	return ""
-
 
 #return game description, website url, support url, tags and requirements using appid
 @app.route('/game_details')
@@ -274,12 +272,12 @@ def manageUser():
 		for tup in rows:
 			userObj = {}
 			userObj['username'] = tup[0]
-			userObj['isbanned'] = str(tup[1])
+			userObj['isbanned'] = str(tup[1]).lower()
 			userslist.append(userObj)
-		conn.commit()
-		render_template('manage_user.html',user="DEFAULT", userslist = userslist)
+		# conn.commit()
+		return render_template('manage_user.html',user="DEFAULT", userslist = userslist)
 	except Exception as e:
-		conn.rollback()
+		# conn.rollback()
 		print("manageUser",e)
 		return "Some error occured"
 
@@ -325,9 +323,9 @@ def addMoney():
 		username = request.form.get('username')
 		amount = request.form.get('amount')
 		username = str(username)
-		amount = float(amount)
+		amount = round(float(amount),2)
 		try:
-			cur.execute("UPDATE wallet SET money = money+"+str(amount)+" WHERE username="+username)
+			cur.execute("UPDATE wallet SET balance = balance+"+str(amount)+" WHERE username='"+username+"'")
 			conn.commit()
 			return "added money to wallet of user "+ username
 		except Exception as e:
@@ -412,3 +410,22 @@ def deleteGame():
 			return "Some error occured!"
 	else:
 		return "Invalid request"
+
+
+@app.route('/getMoneyOfUser', methods=['POST'])
+def getMoneyOfUser():
+	if request.method == 'POST':
+		username = request.form.get('username')
+		try:
+			cur.execute("SELECT balance from wallet where username='"+str(username)+"'")
+			rows = cur.fetchall()
+			if len(rows)>0:
+				balance = str(round(float(rows[0][0]), 1))+" INR"
+			else:
+				balance = "unable to fetch balance"
+			conn.commit()
+			return balance
+		except Exception as e:
+			conn.rollback()
+			print("getMoneyOfUser",e)
+			return "unable to fetch balance"
