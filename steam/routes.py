@@ -388,6 +388,27 @@ def addGame():
 		return "Bad request"
 
 
-@app.route('/admin')
-def admin():
-	return render_template('admin_page.html',user="DEFAULT")
+# @app.route('/admin')
+# def admin():
+# 	return render_template('admin_page.html',user="DEFAULT")
+
+@app.route('/deleteGame', methods=['POST'])
+def deleteGame():
+	#only admin can call this function
+	if request.method == 'POST':
+		appid = request.form.get('appid')
+		try:
+			cur.execute("DELETE FROM games where appid="+str(appid));
+			cur.execute("DELETE FROM games_description where appid="+str(appid))
+			# cur.execute("DELETE FROM media_data where appid="+str(appid))
+			# cur.execute("DELETE FROM requirements where appid="+str(appid))
+			# cur.execute("DELETE FROM support where appid="+str(appid))
+			# cur.execute("DELETE FROM tags where appid="+str(appid))
+			conn.commit()
+			return "successfully deleted!"
+		except Exception as e:
+			print("deleteGame",e)
+			conn.rollback()
+			return "Some error occured!"
+	else:
+		return "Invalid request"
