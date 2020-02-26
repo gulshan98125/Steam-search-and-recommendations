@@ -1,0 +1,157 @@
+<!-- admin can open this page and ban or add money to user -->
+{% extends "base.html" %}
+{% block content %}
+	<style type="text/css">
+		/* Popup box BEGIN */
+		.addMoneyPopup{
+		    background:rgba(0,0,0,.4);
+		    cursor:pointer;
+		    display:none;
+		    height:100%;
+		    position:fixed;
+		    text-align:center;
+		    top:0;
+		    width:100%;
+		    z-index:10000;
+		}
+		.addMoneyPopup .helper{
+		    display:inline-block;
+		    height:100%;
+		    vertical-align:middle;
+		}
+		.addMoneyPopup > div {
+		    background-color: #fff;
+		    box-shadow: 10px 10px 60px #555;
+		    display: inline-block;
+		    height: auto;
+		    max-width: 551px;
+		    min-height: 100px;
+		    vertical-align: middle;
+		    width: 60%;
+		    position: relative;
+		    border-radius: 8px;
+		    padding: 15px 5%;
+		}
+		.popupCloseButton {
+		    background-color: #fff;
+		    border: 3px solid #999;
+		    border-radius: 50px;
+		    cursor: pointer;
+		    display: inline-block;
+		    font-family: arial;
+		    font-weight: bold;
+		    position: absolute;
+		    top: -20px;
+		    right: -20px;
+		    font-size: 25px;
+		    line-height: 30px;
+		    width: 30px;
+		    height: 30px;
+		    text-align: center;
+		}
+		.popupCloseButton:hover {
+		    background-color: #ccc;
+		}
+		.trigger_popup_fricc {
+		    cursor: pointer;
+		    font-size: 20px;
+		    margin: 20px;
+		    display: inline-block;
+		    font-weight: bold;
+		}
+		/* Popup box BEGIN */
+	</style>
+
+	<div id="table">
+		<table style="width:100%">
+			  <tr>
+			    <th>Username</th>
+			    <th>Add money</th>
+			    <th>Ban/Unban</th>
+			  </tr>
+			  {% if userslist %}
+			  	{% for userObj in userslist %}
+			  		<tr>
+			  		  <td> {{userObj.username}} </td>
+			  		  {% if userObj.isbanned == 'true' %}
+			  		  	<td> <button style="color: yellow" onclick="unbanfunc({{userObj.username}})"> unban </button> </td>
+			  		  {% else %}
+			  		  	<td> <button style="color: red" onclick="banfunc({{userObj.username}})"> ban </button> </td>
+			  		  {% endif %}
+			  		  <td> <button onclick="addMoneyPopup({{userObj.username}})"> Add money </button> </td>
+			  		</tr>
+			  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
+			  	{% endfor %}
+			  {% endif %}
+		</table>
+	</div>
+
+	<div class="addMoneyPopup">
+	    <span class="helper"></span>
+	    <div>
+	        <div class="popupCloseButton">&times;</div>
+	        <div id="popupContent"> <input id="moneyVal" type="text" name="money" placeholder="amount to add"> <button onclick="addMoney()">Add money</button> </div>
+	    </div>
+	</div>
+
+	<script type="text/javascript">
+
+		clickedUser = null;
+
+		function banfunc(username){
+			$.post("/banUser",
+			 {
+			 	username: username
+			 },
+			 function(data, status){
+			 	if(confirm(status)){
+			 	    window.location.reload();  
+			 	}
+			 });
+		}
+
+		function unbanfunc(username){
+			function banfunc(username){
+				$.post("/unbanUser",
+				 {
+				 	username: username
+				 },
+				 function(data, status){
+				 	if(confirm(status)){
+				 	    window.location.reload();  
+				 	}
+				 });
+			}
+		}
+
+		function addMoneyPopup(username){
+			clickedUser = username; //update username
+			$('.addMoneyPopup').show();
+		}
+
+		function addMoney(){
+			//adds money to the user assigned to the current
+			//username variable
+			if($('#moneyVal').val().match(/^[0-9]+$/)===null ) {
+				//when string is not number
+				alert("enter valid money");
+			}
+
+			$.post("/addMoney",
+			 {
+			 	username: clickedUser,
+			 	amount: $('#moneyVal').val()
+			 },
+			 function(data, status){
+			 	if(confirm(status)){
+			 	    window.location.reload();  
+			 	}
+			 });
+		}
+
+		$('.popupCloseButton').click(function(){
+		        $('.addMoneyPopup').hide();
+		    });
+
+	</script>
+{% endblock %}

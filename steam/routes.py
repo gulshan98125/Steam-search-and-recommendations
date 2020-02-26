@@ -21,7 +21,7 @@ def home():
 				D["name"] = tup[0]
 				D["release_date"] = tup[1]
 				D["appid"] = tup[2]
-				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
 				games.append(D)
 		cur.execute("SELECT count(*) from games")
 		rows = cur.fetchall()
@@ -101,7 +101,7 @@ def game_details():
 			variables["negative_ratings"] = tup[13]
 			variables["average_playtime"] = tup[14]
 			variables["player_count"] = tup[16]
-			variables["price"] = float(tup[17])*93.13 #in inr
+			variables["price"] = str(round(float(tup[17])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
 		else:
 			variables["name"] = None
 			variables["release_date"] = None
@@ -198,7 +198,7 @@ def searchGames():
 				D["name"] = tup[0]
 				D["release_date"] = tup[1]
 				D["appid"] = tup[2]
-				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
 				games.append(D)
 		#for counting total matching games
 		cur.execute("SELECT count(*) from games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%'")
@@ -227,8 +227,63 @@ def getGames():
 				D["name"] = tup[0]
 				D["release_date"] = tup[1]
 				D["appid"] = tup[2]
-				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
 				games.append(D)
 		return json.dumps(games)
 	else:
 		return "Invalid Request"
+
+@app.route('/manageUser', methods=['GET','POST'])
+def manageUser():
+	#when admin is user then only open this page
+	if request.method == 'GET':
+		page_num = 1
+	else:
+		page_num = request.form.get('page_num')
+	page_num = int(page_num)
+	if page_num <=0:
+		return "Bad page number"
+	cur.execute("SELECT * FROM username, isbanned FROM users WHERE isadmin=false ORDER BY username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ")
+	rows = cur.fetchall()
+	userslist = []
+	for tup in rows:
+		userObj = {}
+		userObj['username'] = tup[0]
+		userObj['isbanned'] = str(tup[1])
+		userslist.append(userObj)
+	render_template('manage_user.html',user="DEFAULT", userslist = userslist)
+
+@app.route('/banUser', methods=['POST'])
+def banUser():
+	#only when the request is made by admin
+	if request.method == 'POST':
+		username = request.form.get('username')
+		username = str(username)
+		cur.execute("UPDATE users SET isbanned=true WHERE username='"+username+"'")
+		rows = curr.fetchall()
+		print("rows for UPDATE banned", rows)
+		return "successfully banned user "+ username
+
+@app.route('/unbanUser', methods=['POST'])
+def unbanUser():
+	#only when the request is made by admin
+	if request.method == 'POST':
+		username = request.form.get('username')
+		username = str(username)
+		cur.execute("UPDATE users SET isbanned=false WHERE username='"+username+"'")
+		rows = curr.fetchall()
+		print("rows for UPDATE unbanned", rows)
+		return "unbanned user "+ username
+
+@app.route('/addMoney', methods=['POST'])
+def addMoney():
+	#only admin can use this method
+	if request.method == 'POST':
+		username = request.form.get('username')
+		amount = request.form.get('amount')
+		username = str(username)
+		amount = float(amount)
+		cur.execute("UPDATE wallet SET money = money+"+str(amount)+" WHERE username="+username)
+		rows = curr.fetchall()
+		print("rows for UPDATE wallet", rows)
+		return "added money to wallet of user "+ username
