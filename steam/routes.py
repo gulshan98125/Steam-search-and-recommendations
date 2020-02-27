@@ -25,7 +25,7 @@ def home():
 				D["name"] = tup[0]
 				D["release_date"] = tup[1]
 				D["appid"] = tup[2]
-				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
 				games.append(D)
 		cur.execute("SELECT count(*) from games")
 		rows = cur.fetchall()
@@ -33,11 +33,12 @@ def home():
 			totalRows = rows[0][0]
 		else:
 			totalRows = 0
+		conn.commit()
 		return render_template('home.html', user="DEFAULT",games = games, totalRows=totalRows)
 	except Exception as e:
-		print(e)
-		return ""
-
+		conn.rollback()
+		print("home",e)
+		return "Some error occured"
 
 #return game description, website url, support url, tags and requirements using appid
 @app.route('/game_details')
@@ -100,7 +101,7 @@ def game_details():
 			variables["negative_ratings"] = tup[13]
 			variables["average_playtime"] = tup[14]
 			variables["player_count"] = tup[16]
-			variables["price"] = float(tup[17])*93.13 #in inr
+			variables["price"] = str(round(float(tup[17])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
 		else:
 			variables["name"] = None
 			variables["release_date"] = None
@@ -123,7 +124,6 @@ def game_details():
 		variables["linux_requirements"] = linux_requirements
 		variables["mac_requirements"] = mac_requirements
 		variables["appid"] = appid
-
 		if 'user' in session:
 			username = session['user']
 			cur.execute("SELECT appid FROM favourites WHERE username = '" + str(username) + "'")
@@ -139,11 +139,12 @@ def game_details():
 			row = cur.fetchall()
 			money = row[0][0]
 			variables['user_money'] = money
-
+		conn.commit()
 		return render_template('game_details.html', user="DEFAULT",vars = variables)
 	except Exception as e:
-		print(e)
-		return str(e)
+		conn.rollback()
+		print("game_details",e)
+		return "Some error occured"
 
 @app.route('/reviews')
 def reviews():
@@ -166,11 +167,13 @@ def reviews():
 				D["found_funny"] = tup[2]
 				D["hours"] = tup[3]
 				D["date"] = tup[4]
-				rev.append(D)			
+				rev.append(D)
+		conn.commit()
 		return render_template('reviews.html', user="DEFAULT",reviews = rev, appid=appid)
 	except Exception as e:
-		print(e)
-		return ""
+		print("reviews",e)
+		conn.rollback()
+		return "Some error occured"
 
 @app.route('/screenshots')
 def screenshots():
@@ -182,6 +185,7 @@ def screenshots():
 		html = """""";
 		rows = cur.fetchall()
 		res = []
+		conn.commit()
 		if len(rows)>0:
 			for ss in ast.literal_eval(rows[0][0]):
 				D = {}
@@ -192,8 +196,9 @@ def screenshots():
 		else:
 			return "ERROR"
 	except Exception as e:
-		print(e)
-		return "EXCEPTION"
+		print("screenshots",e)
+		conn.rollback()
+		return "Some error occured"
 
 @app.route('/searchGames',methods=['POST'])
 def searchGames():
@@ -204,19 +209,30 @@ def searchGames():
 			return json.dumps("[]")
 		page_num = int(page_num)
 		searchString = searchString.lower() #to remove any caps problem
-		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ");
+		try:
+			cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ");
+		except Exception as e:
+			print("searchGames1",e)
+			conn.rollback()
+			return "Some error occured 1"
 		rows = cur.fetchall()
 		games = []
 		if len(rows)>0:
 			for tup in rows:
 				D = {}
 				D["name"] = tup[0]
-				D["release_date"] = tup[1]
+				D["release_date"] = str(tup[1])
 				D["appid"] = tup[2]
-				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
 				games.append(D)
 		#for counting total matching games
-		cur.execute("SELECT count(*) from games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%'")
+		try:
+			cur.execute("SELECT count(*) from games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%'")
+			conn.commit()
+		except Exception as e:
+			print("searchGames2",e)
+			conn.rollback()
+			return "Some error occured 2"
 		rows = cur.fetchall()
 		if len(rows)>0:
 			totalRows = rows[0][0]
@@ -233,20 +249,87 @@ def getGames():
 		page_num = request.form.get('page_num')
 		if int(page_num)<=0:
 			return json.dumps("[]")
-		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ");
-		rows = cur.fetchall()
-		games = []
-		if len(rows)>0:
-			for tup in rows:
-				D = {}
-				D["name"] = tup[0]
-				D["release_date"] = tup[1]
-				D["appid"] = tup[2]
-				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
-				games.append(D)
-		return json.dumps(games)
+		try:
+			cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ");
+			rows = cur.fetchall()
+			games = []
+			if len(rows)>0:
+				for tup in rows:
+					D = {}
+					D["name"] = tup[0]
+					D["release_date"] = str(tup[1])
+					D["appid"] = tup[2]
+					D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
+					games.append(D)
+			conn.commit()
+			return json.dumps(games)
+		except Exception as e:
+			print("getGames",e)
+			conn.rollback()
+			return "Some error occured"
 	else:
 		return "Invalid Request"
+
+@app.route('/manageUser', methods=['GET','POST'])
+def manageUser():
+	#when admin is user then only open this page
+	if request.method == 'GET':
+		page_num = 1
+	else:
+		page_num = request.form.get('page_num')
+	page_num = int(page_num)
+	if page_num <=0:
+		return "Bad page number"
+	try:
+		cur.execute("SELECT username, isbanned FROM users WHERE isadmin=false ORDER BY username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ")
+		rows = cur.fetchall()
+		userslist = []
+		for tup in rows:
+			userObj = {}
+			userObj['username'] = tup[0]
+			userObj['isbanned'] = str(tup[1]).lower()
+			userslist.append(userObj)
+		# conn.commit()
+		return render_template('manage_user.html',user="DEFAULT", userslist = userslist)
+	except Exception as e:
+		# conn.rollback()
+		print("manageUser",e)
+		return "Some error occured"
+
+
+@app.route('/banUser', methods=['POST'])
+def banUser():
+	#only when the request is made by admin
+	if request.method == 'POST':
+		username = request.form.get('username')
+		username = str(username)
+		try:
+			cur.execute("UPDATE users SET isbanned=true WHERE username='"+username+"'")
+			conn.commit()
+			return "successfully banned user "+ username
+		except Exception as e:
+			conn.rollback()
+			print("banuser",e)
+			return "Some error occured"
+	else:
+		return "Bad request"
+
+@app.route('/unbanUser', methods=['POST'])
+def unbanUser():
+	#only when the request is made by admin
+	if request.method == 'POST':
+		username = request.form.get('username')
+		username = str(username)
+		try:
+			cur.execute("UPDATE users SET isbanned=false WHERE username='"+username+"'")
+			conn.commit()
+			return "unbanned user "+ username
+		except Exception as e:
+			print("unbanuser", e)
+			conn.rollback()
+			return "Some error occured"
+	else:
+		return "Bad request"
 
 @app.route('/register')
 def register():
@@ -460,3 +543,117 @@ def game_lib():
 		print('Exception')
 		print(e)
 		return str(e)
+
+@app.route('/addMoney', methods=['POST'])
+def addMoney():
+	#only admin can use this method
+	if request.method == 'POST':
+		username = request.form.get('username')
+		amount = request.form.get('amount')
+		username = str(username)
+		amount = round(float(amount),2)
+		try:
+			cur.execute("UPDATE wallet SET balance = balance+"+str(amount)+" WHERE username='"+username+"'")
+			conn.commit()
+			return "added money to wallet of user "+ username
+		except Exception as e:
+			print("addMoney",e)
+			conn.rollback()
+			return "Some error occured!"
+	else:
+		return "Bad request"
+
+
+@app.route('/addGame', methods=['POST'])
+def addGame():
+	#only admin can call this function
+	if request.method == 'POST':
+		name = request.form.get('name').replace("'","&#39")
+		release_date = request.form.get('release_date')
+		description = request.form.get('description').replace("'","&#39")
+		developers = request.form.get('developers').replace("'","&#39")
+		publishers = request.form.get('publishers').replace("'","&#39")
+		platforms = request.form.get('platforms').replace("'","&#39")
+		required_age = request.form.get('required_age')
+		categories = request.form.get('categories').replace("'","&#39")
+		genres = request.form.get('genres').replace("'","&#39")
+		tags = request.form.get('tags').replace("'","&#39")
+		achievements = request.form.get('achievements')
+		price = request.form.get('price')
+		price = float(price)
+		price /=93.13 #to convert to gbp
+		try:
+			cur.execute("SELECT MAX(appid) from games");
+			rows = cur.fetchall()
+			appidmax = int(rows[0][0])
+			newappid = appidmax+1
+		except Exception as e:
+			print("addGame1",e)
+			conn.rollback()
+			return "Some error occured1!"
+		
+		try:
+			cur.execute(
+						'''
+						INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
+						VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
+						'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
+							genres=genres,tags=tags,achievements=achievements,price=str(price))
+						)
+			cur.execute('''
+						INSERT INTO games_description (appid, detailed_description, about_game, short_description)
+						VALUES ({newappid}, '{description}', '{description}', '{description}')
+						'''.format(newappid=newappid, description=description))
+			conn.commit()
+			return "added game "+name
+		except Exception as e:
+			print("addGame2",e)
+			conn.rollback()
+			return "Some error occured2!"
+	else:
+		return "Bad request"
+
+
+# @app.route('/admin')
+# def admin():
+# 	return render_template('admin_page.html',user="DEFAULT")
+
+@app.route('/deleteGame', methods=['POST'])
+def deleteGame():
+	#only admin can call this function
+	if request.method == 'POST':
+		appid = request.form.get('appid')
+		try:
+			cur.execute("DELETE FROM games where appid="+str(appid));
+			cur.execute("DELETE FROM games_description where appid="+str(appid))
+			# cur.execute("DELETE FROM media_data where appid="+str(appid))
+			# cur.execute("DELETE FROM requirements where appid="+str(appid))
+			# cur.execute("DELETE FROM support where appid="+str(appid))
+			# cur.execute("DELETE FROM tags where appid="+str(appid))
+			conn.commit()
+			return "successfully deleted!"
+		except Exception as e:
+			print("deleteGame",e)
+			conn.rollback()
+			return "Some error occured!"
+	else:
+		return "Invalid request"
+
+
+@app.route('/getMoneyOfUser', methods=['POST'])
+def getMoneyOfUser():
+	if request.method == 'POST':
+		username = request.form.get('username')
+		try:
+			cur.execute("SELECT balance from wallet where username='"+str(username)+"'")
+			rows = cur.fetchall()
+			if len(rows)>0:
+				balance = str(round(float(rows[0][0]), 1))+" INR"
+			else:
+				balance = "unable to fetch balance"
+			conn.commit()
+			return balance
+		except Exception as e:
+			conn.rollback()
+			print("getMoneyOfUser",e)
+			return "unable to fetch balance"
