@@ -9,7 +9,7 @@ import datetime
 import psycopg2
 import time
 
-conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "steam_project")
+conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "project")
 cur = conn.cursor()
 
 @app.route('/home')
@@ -68,17 +68,17 @@ def game_details():
 			wr = ast.literal_eval(rows[0][0])
 			mr = ast.literal_eval(rows[0][1])
 			lr = ast.literal_eval(rows[0][2])
-			if type(wr) == type({}):
+			try:
 				windows_requirements = wr['minimum']
-			else:
+			except:
 				windows_requirements = None
-			if type(mr) == type({}):
+			try:
 				mac_requirements = mr['minimum']
-			else:
+			except:
 				mac_requirements = None
-			if type(lr)==type({}):
+			try:
 				linux_requirements = lr['minimum']
-			else:
+			except:
 				linux_requirements = None
 		else:
 			windows_requirements = None
@@ -101,7 +101,7 @@ def game_details():
 			variables["negative_ratings"] = tup[13]
 			variables["average_playtime"] = tup[14]
 			variables["player_count"] = tup[16]
-			variables["price"] = float(tup[17])*93.13
+			variables["price"] = round(float(tup[17])*93.13,2)
 		else:
 			variables["name"] = None
 			variables["release_date"] = None
