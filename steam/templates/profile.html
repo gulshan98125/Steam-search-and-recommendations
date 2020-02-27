@@ -5,13 +5,18 @@
 
 <div class = "container">
     <h3>Welcome back <strong>{{username}}</strong>.</h3>
-    <a>My Library</a>
+    <a href="/game_lib">My Library</a>
     </br> </br>
     <a href="/get_fav">Favourite Games</a>
+    </br> </br>
+    <h4 id = "wallet_text">Wallet: </h4>
+
 </div>
 
 <script type="text/javascript">
-    
+    $.get( "/get_money", function( data ) {
+                $("#wallet_text").html("Wallet: Rs " + data)
+			});
 </script>
 
 {% endblock %}

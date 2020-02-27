@@ -5,8 +5,10 @@ import ast
 from flask import redirect, url_for, flash, session
 from .constants import *
 import hashlib
-
+import datetime
 import psycopg2
+import time
+
 conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "steam_project")
 cur = conn.cursor()
 
@@ -126,6 +128,17 @@ def game_details():
 			username = session['user']
 			cur.execute("SELECT appid FROM favourites WHERE username = '" + str(username) + "'")
 			session['user_obj']['favs'] = [a[0] for a in cur.fetchall()]
+
+			cur.execute("SELECT * FROM transactions WHERE username = '" + str(username) + "' and appid = " + str(appid))
+			if len(cur.fetchall())==0:
+				variables['owned'] = 1
+			else:
+				variables['owned'] = 0
+			
+			cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
+			row = cur.fetchall()
+			money = row[0][0]
+			variables['user_money'] = money
 
 		return render_template('game_details.html', user="DEFAULT",vars = variables)
 	except Exception as e:
@@ -384,7 +397,7 @@ def my_wallet():
 def add_money():
 	username = session['user']
 	try:
-		amount = int(request.args.get('amount'))
+		amount = float(request.args.get('amount'))
 		print(amount)
 		cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
 		row = cur.fetchall()
@@ -392,7 +405,57 @@ def add_money():
 		amount+=money
 		cur.execute("update wallets set money = " + str(amount) + " where username = '" + str(username) + "'")
 		conn.commit()
+		session['user_obj']['money'] = amount
 		return "Success. " + str(amount-money) + " has been added to your wallet."
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/get_money')
+def get_money():
+	username = session['user']
+	try:
+		cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
+		row = cur.fetchall()
+		money = row[0][0]
+		return str(money)
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/add_game')
+def add_game():
+	username = session['user']
+	appid = request.args.get('appid')
+	ts = psycopg2.TimestampFromTicks(time.time())
+	price = request.args.get('price')
+	try:
+		cur.execute("insert into transactions values ("+str(appid)+", '" + str(username) +"', " + str(price) + ", " + str(ts) +")")
+		conn.commit()
+		return appid + " added to you library."
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/game_lib')
+def game_lib():
+	username = session['user']
+	try:
+		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid in (SELECT appid FROM transactions where username = '" + str(username) +"')")
+		rows = cur.fetchall()
+		games = []
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["name"] = tup[0]
+				D["release_date"] = tup[1]
+				D["appid"] = tup[2]
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				games.append(D)
+		return render_template('library.html', games = games)
 	except Exception as e:
 		print('Exception')
 		print(e)

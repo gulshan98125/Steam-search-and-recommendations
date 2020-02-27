@@ -21,8 +21,93 @@
 			 	Remove from favourites
 			{% endif %}
 			</button>
+		
+		{% if vars.owned|int !=0 %}
+		<button id = 'buy' onclick="" class="btn btn-dark"  data-toggle="modal" data-target="#buy_game">
+			 	Buy Game
+		</button>
+		{% else %}
+		<button class="btn btn-dark"> write review </button>
+
+		{% endif %}
+	
+		<div class="modal fade" id="buy_game" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+			<div class="modal-dialog" role="document">
+			  <div class="modal-content">
+				<div class="modal-header">
+				  <h4 class="modal-title" id="exampleModalLabel">
+					  {{vars.name}}</h4>
+				  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				  </button>
+				</div>
+				<div class="modal-body">
+					<p><strong>Wallet</strong>: Rs. {{vars.user_money}}</p>
+
+					<table class="table table-hover">
+						<thead>
+						 <tr>
+						  <th>Game name</th>
+						  <th>Price</th>
+						 </tr>
+						</thead>
+							<tr>
+								<td>{{vars.name}}</td>
+								<td>{{vars.price}}</td>
+							</tr>
+								
+					</table>
+
+					{% if not vars.price %}
+					<p>The game is free. Confirm below to buy.</p>
+					<button type="button" onclick="buy_game()" class="btn btn-primary">
+						Add to your library.
+					</button>
+					{% endif %}
+
+					{% if vars.price and vars.price|float <= vars.user_money|float %}
+					<p>Money in wallet after purchase: <strong>{{vars.user_money|float - vars.price|float}}</strong> </p>
+					<button type="button" onclick="update_wallet_and_buy()" class="btn btn-primary">
+						Update Wallet and Buy Game
+					</button>
+				  	{% endif %}
+
+					{% if vars.price and vars.price|float > vars.user_money|float %}
+					<form>
+						<div class="form-group">
+							<label for="usr">Card Number:</label>
+							<input type="number" class="form-control" id="card_num">
+						</div>
+						<div class="form-group">
+							<label for="usr">CVV:</label>
+							<input type="number" class="form-control" id="card_cvv">
+						</div>
+					<!--
+						<div class="form-check">
+						  <input type="checkbox" class="form-check-input" id="exampleCheck1">
+						  <label class="form-check-label" for="exampleCheck1">Save card</label> 
+						</div>
+					-->
+						<button type="button" onclick="update_wallet_and_buy()" class="btn btn-primary">
+							Add Rs. {{vars.price|float - vars.user_money|float}} to the wallet and buy
+						</button>
+					  </form>
+					  {% endif %}
+				</div>
+				<div class="modal-footer">
+				  <button type="submit" class="btn btn-secondary" data-dismiss="modal">Close</button>
+				</div>
+			  </div>
+			</div>
+		  </div>
+
 	{% endif %}
-	<button class="btn btn-dark"> write review </button>
+
+	{% if vars.price %}
+		<h3> Price: Rs. {{vars.price}} </h3>
+	{% else %}
+		<h3> Price: FREE </h3>
+	{% endif %}
 
 	{% if vars.description %}
 		<h1> Description: </h1>
@@ -84,6 +169,31 @@
 		console.log(fav);
 		//window.open('/addtofav?appid={{vars.appid}}')
 	}
+
+	function update_wallet_and_buy(){
+		money = {{vars.user_money}}
+		price = {{vars.price}}
+		amt = -Math.min(money, price)
+		$.get( "/add_money?amount=" + amt, function( data ) {
+			if(data.search("Success") != -1 ){
+                alert("Success. Wallet has been updated.");
+				buy_game()
+			}
+			else
+			alert(data)
+			});
+	}
+
+	function buy_game(){
+		appid = {{vars.appid}}
+		price = {{vars.price|float}}
+		$.get( "/add_game?appid=" + appid.toString() + "&price="+price, function(data) {
+				alert(data)
+				location.reload()
+			});
+
+	}
+
 </script>
 
 {% endblock %}
