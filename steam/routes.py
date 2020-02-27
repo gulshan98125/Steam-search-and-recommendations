@@ -101,7 +101,7 @@ def game_details():
 			variables["negative_ratings"] = tup[13]
 			variables["average_playtime"] = tup[14]
 			variables["player_count"] = tup[16]
-			variables["price"] = str(round(float(tup[17])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
+			variables["price"] = float(tup[17])*93.13
 		else:
 			variables["name"] = None
 			variables["release_date"] = None
@@ -391,6 +391,8 @@ def login():
 			return redirect(url_for('login'))
 
 		try:
+			if row[0][2]:
+				session['admin'] = usr_id
 			session['user'] = usr_id
 			cur.execute("SELECT appid FROM favourites WHERE username = '" + str(usr_id) + "'")
 			user = {}
@@ -408,6 +410,8 @@ def login():
 def logout():
 	session.pop('user', None)
 	session.pop('user_obj', None)
+	if 'admin' in session:
+		session.pop('admin', None)
 	return redirect(url_for('home'))
 
 @app.route('/profile')
@@ -553,7 +557,7 @@ def addMoney():
 		username = str(username)
 		amount = round(float(amount),2)
 		try:
-			cur.execute("UPDATE wallet SET balance = balance+"+str(amount)+" WHERE username='"+username+"'")
+			cur.execute("UPDATE wallets SET money = money+"+str(amount)+" WHERE username='"+username+"'")
 			conn.commit()
 			return "added money to wallet of user "+ username
 		except Exception as e:
@@ -626,10 +630,10 @@ def deleteGame():
 		try:
 			cur.execute("DELETE FROM games where appid="+str(appid));
 			cur.execute("DELETE FROM games_description where appid="+str(appid))
-			# cur.execute("DELETE FROM media_data where appid="+str(appid))
-			# cur.execute("DELETE FROM requirements where appid="+str(appid))
-			# cur.execute("DELETE FROM support where appid="+str(appid))
-			# cur.execute("DELETE FROM tags where appid="+str(appid))
+			cur.execute("DELETE FROM media_data where appid="+str(appid))
+			cur.execute("DELETE FROM requirements where appid="+str(appid))
+			cur.execute("DELETE FROM support where appid="+str(appid))
+			cur.execute("DELETE FROM tags where appid="+str(appid))
 			conn.commit()
 			return "successfully deleted!"
 		except Exception as e:
@@ -645,15 +649,15 @@ def getMoneyOfUser():
 	if request.method == 'POST':
 		username = request.form.get('username')
 		try:
-			cur.execute("SELECT balance from wallet where username='"+str(username)+"'")
+			cur.execute("SELECT money from wallets where username='"+str(username)+"'")
 			rows = cur.fetchall()
 			if len(rows)>0:
-				balance = str(round(float(rows[0][0]), 1))+" INR"
+				money = str(round(float(rows[0][0]), 1))+" INR"
 			else:
-				balance = "unable to fetch balance"
+				money = "unable to fetch money"
 			conn.commit()
-			return balance
+			return money
 		except Exception as e:
 			conn.rollback()
 			print("getMoneyOfUser",e)
-			return "unable to fetch balance"
+			return "unable to fetch money"

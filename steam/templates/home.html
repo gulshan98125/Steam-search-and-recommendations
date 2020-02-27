@@ -12,7 +12,7 @@
 	</style>
 
 	<!-- only when user is admin below code inside if else will run-->
-	{% if true %}
+	{% if 'admin' in session %}
 		<style type="text/css">
 			/* Popup box BEGIN */
 			.addGamePopup{
@@ -150,7 +150,7 @@
 			    <th>Game name</th>
 			    <th>Release date</th>
 			    <th>Price</th>
-			    {% if true %}
+			    {% if 'admin' in session %}
 			    <th> Delete game </th>
 			    {% endif %}
 			  </tr>
@@ -160,7 +160,7 @@
 			  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
 			  		  <td>{{gameObj.release_date}}</td>
 			  		  <td>{{gameObj.price}}</td>
-			  		  {% if true %}
+			  		  {% if 'admin' in session %}
 			  		  	<td><button style="background-color: red" onclick="deleteGame( {{gameObj.appid}} )"> Delete </button></td>
 			  		  {% endif %}
 			  		</tr>
@@ -180,7 +180,7 @@
 			if(status==='success'){
 				isSearched = true;
 				var obj = JSON.parse(data);
-				{% if true %}
+				{% if 'admin' in session %}
 					var newtable = "<table style=\"width:100%\"> <tr> <th>Game name</th> <th>Release date</th> <th>Price</th> <th>Delete game</th> </tr>";
 				{% else %}
 					var newtable = "<table style=\"width:100%\"> <tr> <th>Game name</th> <th>Release date</th> <th>Price</th> </tr>";
@@ -190,7 +190,7 @@
 					s += "<a href=\"/game_details?appid="+obj[i]['appid']+"\">"+obj[i]['name']+"</a>"+"</td><td>"
 					s += obj[i]['release_date']+"</td> <td>"
 					s += obj[i]['price']+"</td>"
-					{% if true %}
+					{% if 'admin' in session %}
 						s += "<td><button style=\"background-color: red\" onclick=\"deleteGame("+obj[i]['appid']+")\"> Delete </button></td>"
 					{% endif %}
 					s+="</tr>"
@@ -206,7 +206,7 @@
 		function getGamesResponseHandler(data,status){
 			if(status==='success'){
 				var obj = JSON.parse(data);
-				{% if true %}
+				{% if 'admin' in session %}
 					var newtable = "<table style=\"width:100%\"> <tr> <th>Game name</th> <th>Release date</th> <th>Price</th> <th>Delete game</th> </tr>";
 				{% else %}
 					var newtable = "<table style=\"width:100%\"> <tr> <th>Game name</th> <th>Release date</th> <th>Price</th> </tr>";
@@ -216,7 +216,7 @@
 					s += "<td> <a href=\"/game_details?appid="+obj[i]['appid']+"\">"+obj[i]['name']+"</a>"+"</td>"
 					s += "<td>"+obj[i]['release_date']+"</td>"
 					s += "<td>"+obj[i]['price']+"</td>"
-					{% if true %}
+					{% if 'admin' in session %}
 						s += "<td><button style=\"background-color: red\" onclick=\"deleteGame("+obj[i]['appid']+")\"> Delete </button></td>"
 					{% endif %}
 					s += "</tr>"
@@ -287,7 +287,7 @@
 			}
 		}
 
-		{% if true %}
+		{% if 'admin' in session %}
 			function deleteGame(appid){
 				console.log("delete",appid);
 				var result = confirm("are you sure you want to delete this game?");
