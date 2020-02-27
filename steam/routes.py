@@ -122,6 +122,11 @@ def game_details():
 		variables["mac_requirements"] = mac_requirements
 		variables["appid"] = appid
 
+		if 'user' in session:
+			username = session['user']
+			cur.execute("SELECT appid FROM favourites WHERE username = '" + str(username) + "'")
+			session['user_obj']['favs'] = [a[0] for a in cur.fetchall()]
+
 		return render_template('game_details.html', user="DEFAULT",vars = variables)
 	except Exception as e:
 		print(e)
