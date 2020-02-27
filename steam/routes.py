@@ -2,10 +2,14 @@ from steam import app
 from flask import render_template, request, jsonify
 import json
 import ast
+from flask import redirect, url_for, flash, session
 from .constants import *
-
+import hashlib
+import datetime
 import psycopg2
-conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "project")
+import time
+
+conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "steam_project")
 cur = conn.cursor()
 
 @app.route('/home')
@@ -35,10 +39,6 @@ def home():
 		conn.rollback()
 		print("home",e)
 		return "Some error occured"
-
-@app.route('/login')
-def login():
-	return ""
 
 #return game description, website url, support url, tags and requirements using appid
 @app.route('/game_details')
@@ -124,6 +124,21 @@ def game_details():
 		variables["linux_requirements"] = linux_requirements
 		variables["mac_requirements"] = mac_requirements
 		variables["appid"] = appid
+		if 'user' in session:
+			username = session['user']
+			cur.execute("SELECT appid FROM favourites WHERE username = '" + str(username) + "'")
+			session['user_obj']['favs'] = [a[0] for a in cur.fetchall()]
+
+			cur.execute("SELECT * FROM transactions WHERE username = '" + str(username) + "' and appid = " + str(appid))
+			if len(cur.fetchall())==0:
+				variables['owned'] = 1
+			else:
+				variables['owned'] = 0
+			
+			cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
+			row = cur.fetchall()
+			money = row[0][0]
+			variables['user_money'] = money
 		conn.commit()
 		return render_template('game_details.html', user="DEFAULT",vars = variables)
 	except Exception as e:
@@ -315,6 +330,219 @@ def unbanUser():
 			return "Some error occured"
 	else:
 		return "Bad request"
+
+@app.route('/register')
+def register():
+	try:
+	#	cur.execute("SELECT * from users")
+	#		rows = cur.fetchall()
+	#	if len(rows)>0:
+	#		users = [r[0] for r in rows]
+	#	else:
+	#		users = []
+		return render_template('register.html')
+	except Exception as e:
+		print(e)
+		return ""
+
+@app.route('/register',methods=['POST'])
+def regUser():
+	usr_id = request.form.get('username')
+	pass_ = request.form.get('password')
+	pass_hash = hashlib.sha256(pass_.encode()).hexdigest()
+#	print(usr_id, pass_, 'details')
+
+	cur.execute("SELECT * FROM users WHERE username = '" + str(usr_id) + "'")
+	row = cur.fetchall()
+	if len(row)!=0:
+		flash('User already exists.')
+		return redirect(url_for('register'))
+	
+	try:
+		cur.execute("INSERT INTO users (username, password) VALUES ('" + str(usr_id)+"','" + str(pass_hash)+"' );")
+		conn.commit()
+		cur.execute("INSERT INTO wallets (username) VALUES ('" + str(usr_id)+"')")
+		conn.commit()
+		session['user'] = usr_id
+		return redirect(url_for('home'))
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return redirect(url_for('register'))
+
+@app.route('/login', methods = ['POST', 'GET'])
+def login():
+	if request.method == 'GET':
+		return render_template('login.html')
+
+	if request.method == 'POST':
+		usr_id = request.form.get('username')
+		pass_ = request.form.get('password')
+		pass_hash = hashlib.sha256(pass_.encode()).hexdigest()
+	#	print(usr_id, pass_, 'details')
+
+		cur.execute("SELECT * FROM users WHERE username = '" + str(usr_id) + "'")
+		row = cur.fetchall()
+		if len(row)==0:
+			flash('User does not exists.')
+			return redirect(url_for('login'))
+		if row[0][1]!=pass_hash:
+			flash('Incorrect password.')
+			return redirect(url_for('login'))
+
+		try:
+			session['user'] = usr_id
+			cur.execute("SELECT appid FROM favourites WHERE username = '" + str(usr_id) + "'")
+			user = {}
+			user['username'] = session['user']
+			user['favs'] = [a[0] for a in cur.fetchall()]
+			session['user_obj'] = user
+			return redirect(url_for('home'))
+		except Exception as e:
+			print('Exception')
+			print(e)
+			return redirect(url_for('login'))
+
+
+@app.route('/logout')
+def logout():
+	session.pop('user', None)
+	session.pop('user_obj', None)
+	return redirect(url_for('home'))
+
+@app.route('/profile')
+def profile():
+	if 'user' not in session:
+		flash('You need to be logged in to see your profile.')
+		return redirect(url_for('login'))
+
+	usr_id = session['user']
+	return render_template('profile.html', username = usr_id)
+
+@app.route('/toggle_fav')
+def toggle_fav():
+	appid = request.args.get('appid')
+	username = session['user']
+	if appid == None:
+		return "No appid provided"
+	try:
+		cur.execute("SELECT appid FROM favourites where appid = "+str(appid)+" and username = '" + str(username) +"'")
+		row = cur.fetchall()
+		print(row)
+		if len(row)!=0:
+			cur.execute("delete from favourites where appid = "+str(appid)+" and username = '" + str(username) +"'")
+			conn.commit()
+			return str(appid) + " removed from favourites"
+		else:
+			cur.execute("insert into favourites values ("+str(appid)+", '" + str(username) +"')")
+			conn.commit()
+			return str(appid) + " added to favourites"
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/get_fav')
+def get_fav():
+	username = session['user']
+	try:
+		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid in (SELECT appid FROM favourites where username = '" + str(username) +"')")
+		rows = cur.fetchall()
+		games = []
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["name"] = tup[0]
+				D["release_date"] = tup[1]
+				D["appid"] = tup[2]
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				games.append(D)
+		return render_template('fav_games.html', games = games)
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/wallet')
+def my_wallet():
+	username = session['user']
+	try:
+		cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
+		row = cur.fetchall()
+		money = row[0][0]
+		return render_template('wallet.html', money = money)
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/add_money')
+def add_money():
+	username = session['user']
+	try:
+		amount = float(request.args.get('amount'))
+		print(amount)
+		cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
+		row = cur.fetchall()
+		money = row[0][0]
+		amount+=money
+		cur.execute("update wallets set money = " + str(amount) + " where username = '" + str(username) + "'")
+		conn.commit()
+		session['user_obj']['money'] = amount
+		return "Success. " + str(amount-money) + " has been added to your wallet."
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/get_money')
+def get_money():
+	username = session['user']
+	try:
+		cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
+		row = cur.fetchall()
+		money = row[0][0]
+		return str(money)
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/add_game')
+def add_game():
+	username = session['user']
+	appid = request.args.get('appid')
+	ts = psycopg2.TimestampFromTicks(time.time())
+	price = request.args.get('price')
+	try:
+		cur.execute("insert into transactions values ("+str(appid)+", '" + str(username) +"', " + str(price) + ", " + str(ts) +")")
+		conn.commit()
+		return appid + " added to you library."
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/game_lib')
+def game_lib():
+	username = session['user']
+	try:
+		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid in (SELECT appid FROM transactions where username = '" + str(username) +"')")
+		rows = cur.fetchall()
+		games = []
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["name"] = tup[0]
+				D["release_date"] = tup[1]
+				D["appid"] = tup[2]
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				games.append(D)
+		return render_template('library.html', games = games)
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
 
 @app.route('/addMoney', methods=['POST'])
 def addMoney():

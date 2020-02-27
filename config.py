@@ -1,8 +1,9 @@
+import os
 """ API config File """
-from constants import *
+from steam.constants import *
 class Config(object):
     """ Parent configuration class """
-DEBUG = False
+    DEBUG = False
     TESTING = False
     Database_Url = os.getenv("Main_Database")
     SECRET_KEY = SECRET
