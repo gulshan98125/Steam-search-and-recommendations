@@ -2,15 +2,27 @@
 {% block content %}
 	<h1> Game : {{vars.name}} </h1>
 
-	<button onclick="window.open('/reviews?appid={{vars.appid}}&page_num=1')"> Reviews </button>
-	<button onclick="window.open('/screenshots?appid={{vars.appid}}')"> Screenshots </button>
+	<button onclick="window.open('/reviews?appid={{vars.appid}}&page_num=1')" class="btn btn-dark"> Reviews </button>
+	<button onclick="window.open('/screenshots?appid={{vars.appid}}')" class="btn btn-dark"> Screenshots </button>
 	{% if vars.website %}
-	<button onclick="window.open('{{vars.website}}')"> website </button>
+	<button onclick="window.open('{{vars.website}}')" class="btn btn-dark"> website </button>
 	{% endif %}
 	{% if vars.steam_page %}
-	<button onclick="window.open('{{vars.steam_page}}')"> steam page </button>
+	<button onclick="window.open('{{vars.steam_page}}')" class="btn btn-dark"> steam page </button>
 	{% endif %}
-	<button> write review </button>
+	{% if 'user' in session %}
+		
+		<button id = 'fav' onclick="toggle_fav()" class="btn btn-dark">
+			{% if vars.appid|int not in session['user_obj']['favs'] %}
+				{% set fav = 0 %}
+			 	Add to favourites
+			{% else %}
+				{% set fav = 1 %}
+			 	Remove from favourites
+			{% endif %}
+			</button>
+	{% endif %}
+	<button class="btn btn-dark"> write review </button>
 
 	{% if vars.description %}
 		<h1> Description: </h1>
@@ -45,9 +57,33 @@
 			{{tag}} ,
 		{% endfor %}
 	{% endif %}
+
 <!-- 
     <h1>Hi, {{ user.username }}!</h1>
     {% for post in posts %}
     <div><p>{{ post.author.username }} says: <b>{{ post.body }}</b></p></div>
-    {% endfor %} -->
+	{% endfor %} -->
+
+<script>
+	fav = {{fav}}
+	function toggle_fav(){
+		if(fav==1){
+			fav = 0;
+			$("#fav").html('Add to favourites')
+			$.get( '/toggle_fav?appid={{vars.appid}}', function( data ) {
+				alert(data);
+			});
+		}
+		else{
+			fav = 1;
+			$("#fav").html('Remove from favourites')
+				$.get('/toggle_fav?appid={{vars.appid}}', function(data) {
+					alert(data);
+			});
+		}
+		console.log(fav);
+		//window.open('/addtofav?appid={{vars.appid}}')
+	}
+</script>
+
 {% endblock %}

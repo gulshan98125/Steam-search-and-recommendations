@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+<div class = "container">
+    <h3>Favourite games for <strong>{{session['user']}}</strong>.</h3>
+        {% if not games %}
+        </br></br>
+        <h4> You currently have no favourite games.</h4>
+        {% else %}
+		<table class="table table-hover">
+			  <thead>
+               <tr>
+			    <th>Game name</th>
+			    <th>Release date</th>
+			    <th>Price</th>
+               </tr>
+			  </thead>
+			  {% if games %}
+			  	{% for gameObj in games %}
+			  		<tr>
+			  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
+			  		  <td>{{gameObj.release_date}}</td>
+			  		  <td>{{gameObj.price}}</td>
+			  		</tr>
+			  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
+			  	{% endfor %}
+			  {% endif %}
+        </table>
+        {%endif%}
+</div>
+
+<script type="text/javascript">
+    
+</script>
+
+{% endblock %}

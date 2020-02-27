@@ -5,11 +5,31 @@
       {% else %}
       <title>Home</title>
       {% endif %}
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     </head>
     <body>
-        <div><a href="/home">Home</a></div>
-        <hr>
+        {% if 'user' not in session %}
+        <div>
+          <a class="btn btn-primary stretched-link" href="/home">Home</a> 
+          <a class="btn btn-primary stretched-link" href="/games">Games</a> 
+          <a class="btn btn-primary stretched-link" href="/login">Login</a> 
+          <a class="btn btn-primary stretched-link" href="/register">Register</a>
+        </div>
+        {% endif %}
+
+        {% if 'user' in session %}
+        <div>
+          <a class="btn btn-primary stretched-link" href="/home">Home</a> 
+          <a class="btn btn-primary stretched-link" href="/games">Games</a> 
+          <a class="btn btn-primary stretched-link" href="/profile">Profile</a> 
+          <a class="btn btn-primary stretched-link" href="/logout">Logout</a>
+          <a class="btn btn-primary stretched-link" href="/wallet">My Wallet</a> 
+        </div>
+        {% endif %}
+        
+        
         {% block content %}{% endblock %}
     </body>
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 </html>

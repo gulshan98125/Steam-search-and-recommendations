@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="alert alert-danger">
+            {{ messages[0] }}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class = "container">
+    <form action="/register" method="POST">
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input name = "username" class="form-control" id="username">
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input name = "password" type="password" class="form-control" id="pass">
+        </div>
+        <div class="form-group">
+            <label for="cnf_password">Confirm Password:</label>
+            <input type="password" class="form-control" id="pass_cnf">
+        </div>
+      <button type="submit" onclick="return reg()" class="btn btn-default">Submit</button> 
+    <!--    <button class="btn btn-default">Submit</button>-->
+    </form>
+</div>
+
+<script type="text/javascript">
+function reg(){
+//    alert({{users}});
+    URL = '/register'
+    usr = $("#username").val()
+    pass = $("#pass").val()
+    pass_cnf = $("#pass_cnf").val()
+
+    if(usr=='' || pass=='' || pass_cnf == ''){
+        alert('No fields can be empty');
+        return false;
+    };
+
+    if(pass_cnf != pass){
+        alert('Passwords do not match.');
+        return false;
+    };
+    return true;
+    /*
+    $.post(URL, 
+    {'username':usr, 'password': pass},
+        function(data, status){
+            if(status=="success")
+                alert("Sex");
+        });
+    */
+}
+
+</script>
+
+{% endblock %}

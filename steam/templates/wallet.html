@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+<div class = "container">
+    <h3>Hello <strong>{{session['user']}}</strong>.</h3>
+    <h4>You currently have Rs. {{money}} in your wallet.</h4>
+    <button id = "add_money"  type="button" class="btn btn-success" data-toggle="modal" data-target="#exampleModal">
+        Add money
+    </button>
+
+      
+      <!-- Modal -->
+      <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h4 class="modal-title" id="exampleModalLabel">
+                  Enter your card details <strong>{{session['user']}}</strong></h4>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="usr">Card Number:</label>
+                        <input type="number" class="form-control" id="card_num">
+                    </div>
+                    <div class="form-group">
+                        <label for="usr">CVV:</label>
+                        <input type="number" class="form-control" id="card_cvv">
+                    </div>
+                    <div class="form-group">
+                        <label for="usr">Amount in Rupees:</label>
+                        <input type="number" class="form-control" id="amount">
+                    </div>
+                <!--
+                    <div class="form-check">
+                      <input type="checkbox" class="form-check-input" id="exampleCheck1">
+                      <label class="form-check-label" for="exampleCheck1">Save card</label> 
+                    </div>
+                -->
+                    <button type="button" onclick="add_money()" class="btn btn-primary">Add Money</button>
+                  </form>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+</div>
+
+<script type="text/javascript">
+    function add_money(){
+        c_no = $("#card_num").val()
+        cvv = $("#card_cvv").val()
+        amt = $("#amount").val()
+        if (c_no=='' || cvv=='' || amt =='')
+            alert('Fields cannot be empty')
+        else
+        $.get( "/add_money?amount=" + amt, function( data ) {
+                alert(data);
+                location.reload();
+			});
+    }
+</script>
+
+{% endblock %}
