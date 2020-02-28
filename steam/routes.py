@@ -43,7 +43,7 @@ def home():
 #return game description, website url, support url, tags and requirements using appid
 @app.route('/game_details')
 def game_details():
-	appid = request.args.get('appid') ###
+	appid = request.args.get('appid').replace("'","&#39") ###
 	if appid == None:
 		return "No appid provided"
 	try:
@@ -148,8 +148,8 @@ def game_details():
 
 @app.route('/reviews')
 def reviews():
-	appid = request.args.get('appid') ###
-	page_num = request.args.get('page_num') ###
+	appid = request.args.get('appid').replace("'","&#39") ###
+	page_num = request.args.get('page_num').replace("'","&#39") ###
 	if appid == None:
 		return "No appid provided"
 	if page_num == None:
@@ -177,7 +177,7 @@ def reviews():
 
 @app.route('/screenshots')
 def screenshots():
-	appid = request.args.get('appid') ###
+	appid = request.args.get('appid').replace("'","&#39") ###
 	if appid == None:
 		return "No appid provided"
 	try:
@@ -203,8 +203,8 @@ def screenshots():
 @app.route('/searchGames',methods=['POST'])
 def searchGames():
 	if request.method == 'POST':
-		searchString = request.form.get('string')
-		page_num = request.form.get('page_num')
+		searchString = request.form.get('string').replace("'","&#39")
+		page_num = request.form.get('page_num').replace("'","&#39")
 		if searchString=="" or page_num=="" or int(page_num)<=0:
 			return json.dumps("[]")
 		page_num = int(page_num)
@@ -246,7 +246,7 @@ def searchGames():
 @app.route('/getGames',methods=['POST'])
 def getGames():
 	if request.method == 'POST':
-		page_num = request.form.get('page_num')
+		page_num = request.form.get('page_num').replace("'","&#39")
 		if int(page_num)<=0:
 			return json.dumps("[]")
 		try:
@@ -276,7 +276,7 @@ def manageUser():
 	if request.method == 'GET':
 		page_num = 1
 	else:
-		page_num = request.form.get('page_num')
+		page_num = request.form.get('page_num').replace("'","&#39")
 	page_num = int(page_num)
 	if page_num <=0:
 		return "Bad page number"
@@ -301,7 +301,7 @@ def manageUser():
 def banUser():
 	#only when the request is made by admin
 	if request.method == 'POST':
-		username = request.form.get('username')
+		username = request.form.get('username').replace("'","&#39")
 		username = str(username)
 		try:
 			cur.execute("UPDATE users SET isbanned=true WHERE username='"+username+"'")
@@ -318,7 +318,7 @@ def banUser():
 def unbanUser():
 	#only when the request is made by admin
 	if request.method == 'POST':
-		username = request.form.get('username')
+		username = request.form.get('username').replace("'","&#39")
 		username = str(username)
 		try:
 			cur.execute("UPDATE users SET isbanned=false WHERE username='"+username+"'")
@@ -347,8 +347,8 @@ def register():
 
 @app.route('/register',methods=['POST'])
 def regUser():
-	usr_id = request.form.get('username')
-	pass_ = request.form.get('password')
+	usr_id = request.form.get('username').replace("'","&#39")
+	pass_ = request.form.get('password').replace("'","&#39")
 	pass_hash = hashlib.sha256(pass_.encode()).hexdigest()
 #	print(usr_id, pass_, 'details')
 
@@ -376,8 +376,8 @@ def login():
 		return render_template('login.html')
 
 	if request.method == 'POST':
-		usr_id = request.form.get('username')
-		pass_ = request.form.get('password')
+		usr_id = request.form.get('username').replace("'","&#39")
+		pass_ = request.form.get('password').replace("'","&#39")
 		pass_hash = hashlib.sha256(pass_.encode()).hexdigest()
 	#	print(usr_id, pass_, 'details')
 
@@ -425,7 +425,7 @@ def profile():
 
 @app.route('/toggle_fav')
 def toggle_fav():
-	appid = request.args.get('appid')
+	appid = request.args.get('appid').replace("'","&#39")
 	username = session['user']
 	if appid == None:
 		return "No appid provided"
@@ -484,7 +484,7 @@ def my_wallet():
 def add_money():
 	username = session['user']
 	try:
-		amount = float(request.args.get('amount'))
+		amount = float(request.args.get('amount').replace("'","&#39"))
 		print(amount)
 		cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
 		row = cur.fetchall()
@@ -515,9 +515,9 @@ def get_money():
 @app.route('/add_game')
 def add_game():
 	username = session['user']
-	appid = request.args.get('appid')
+	appid = request.args.get('appid').replace("'","&#39")
 	ts = psycopg2.TimestampFromTicks(time.time())
-	price = request.args.get('price')
+	price = request.args.get('price').replace("'","&#39")
 	try:
 		cur.execute("insert into transactions values ("+str(appid)+", '" + str(username) +"', " + str(price) + ", " + str(ts) +")")
 		conn.commit()
@@ -552,8 +552,8 @@ def game_lib():
 def addMoney():
 	#only admin can use this method
 	if request.method == 'POST':
-		username = request.form.get('username')
-		amount = request.form.get('amount')
+		username = request.form.get('username').replace("'","&#39")
+		amount = request.form.get('amount').replace("'","&#39")
 		username = str(username)
 		amount = round(float(amount),2)
 		try:
@@ -629,11 +629,6 @@ def deleteGame():
 		appid = request.form.get('appid')
 		try:
 			cur.execute("DELETE FROM games where appid="+str(appid));
-			cur.execute("DELETE FROM games_description where appid="+str(appid))
-			cur.execute("DELETE FROM media_data where appid="+str(appid))
-			cur.execute("DELETE FROM requirements where appid="+str(appid))
-			cur.execute("DELETE FROM support where appid="+str(appid))
-			cur.execute("DELETE FROM tags where appid="+str(appid))
 			conn.commit()
 			return "successfully deleted!"
 		except Exception as e:
@@ -647,7 +642,7 @@ def deleteGame():
 @app.route('/getMoneyOfUser', methods=['POST'])
 def getMoneyOfUser():
 	if request.method == 'POST':
-		username = request.form.get('username')
+		username = request.form.get('username').replace("'","&#39")
 		try:
 			cur.execute("SELECT money from wallets where username='"+str(username)+"'")
 			rows = cur.fetchall()

@@ -81,11 +81,11 @@
 			  	{% for userObj in userslist %}
 			  		<tr>
 			  		  <td> {{userObj.username}} </td>
-			  		  <td> <button onclick="open_addMoneyPopup('{{userObj.username}}')"> Add money </button> </td>
+			  		  <td> <button class="btn btn-success" onclick="open_addMoneyPopup('{{userObj.username}}')"> Add money </button> </td>
 			  		  {% if userObj.isbanned == 'true' %}
-			  		  	<td> <button style="color: green" onclick="unbanfunc('{{userObj.username}}')"> unban </button> </td>
+			  		  	<td> <button class="btn btn-warning" onclick="unbanfunc('{{userObj.username}}')"> unban </button> </td>
 			  		  {% else %}
-			  		  	<td> <button style="color: red" onclick="banfunc('{{userObj.username}}')"> ban </button> </td>
+			  		  	<td> <button class="btn btn-danger" onclick="banfunc('{{userObj.username}}')"> ban </button> </td>
 			  		  {% endif %}
 			  		</tr>
 			  	{% endfor %}
@@ -99,7 +99,7 @@
 	        <div class="popupCloseButton" onclick="close_addMoneyPopup()">&times;</div>
 	        <div id="popupContent"> 
 	        	Current wallet balance: <div id="walletBalance">Unable to fetch</div> <br>
-	        	<input id="moneyVal" type="text" name="money" placeholder="amount to add"> <button onclick="addMoney()">Add money</button> 
+	        	<input id="moneyVal" type="text" name="money" placeholder="amount to add"> <button class="btn btn-info" onclick="addMoney()">Add money</button> 
 	        </div>
 	    </div>
 	</div>

@@ -73,8 +73,8 @@
 			}
 			/* Popup box BEGIN */
 		</style>
-		<button onclick="open_addGamePopup()"> Add game </button>
-		<button onclick="window.open('/manageUser')"> Manage User (Add money/Ban) </button>
+		&nbsp <button type="button" class="btn btn-primary" onclick="open_addGamePopup()">Add game</button>
+		<button type="button" class="btn btn-primary" onclick="window.open('/manageUser')">Manage Users</button>
 
 
 		<div class="addGamePopup">
@@ -134,9 +134,8 @@
 		</script>
 	<br>
 	<br>
-	<br>
 	{% endif %}
-	<input type="text" id="searchBar" name="fname" placeholder="search by name">
+	&nbsp&nbsp<input type="text" id="searchBar" name="fname" placeholder="search by name">
 	<Button id="searchButton" onclick="search()"> Search </Button> <br>
 	
 	<br>
@@ -161,7 +160,7 @@
 			  		  <td>{{gameObj.release_date}}</td>
 			  		  <td>{{gameObj.price}}</td>
 			  		  {% if 'admin' in session %}
-			  		  	<td><button style="background-color: red" onclick="deleteGame( {{gameObj.appid}} )"> Delete </button></td>
+			  		  	<td><button class="btn btn-danger" onclick="deleteGame( {{gameObj.appid}} )"> Delete </button></td>
 			  		  {% endif %}
 			  		</tr>
 			  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
@@ -191,7 +190,7 @@
 					s += obj[i]['release_date']+"</td> <td>"
 					s += obj[i]['price']+"</td>"
 					{% if 'admin' in session %}
-						s += "<td><button style=\"background-color: red\" onclick=\"deleteGame("+obj[i]['appid']+")\"> Delete </button></td>"
+						s += "<td><button class=\"btn btn-danger\" onclick=\"deleteGame("+obj[i]['appid']+")\"> Delete </button></td>"
 					{% endif %}
 					s+="</tr>"
 					newtable+=s;
@@ -217,7 +216,7 @@
 					s += "<td>"+obj[i]['release_date']+"</td>"
 					s += "<td>"+obj[i]['price']+"</td>"
 					{% if 'admin' in session %}
-						s += "<td><button style=\"background-color: red\" onclick=\"deleteGame("+obj[i]['appid']+")\"> Delete </button></td>"
+						s += "<td><button class=\"btn btn-danger\" onclick=\"deleteGame("+obj[i]['appid']+")\"> Delete </button></td>"
 					{% endif %}
 					s += "</tr>"
 					newtable+=s;
