@@ -8,6 +8,7 @@ import hashlib
 import datetime
 import psycopg2
 import time
+from datetime import datetime
 
 conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
 cur = conn.cursor()
@@ -15,8 +16,41 @@ cur = conn.cursor()
 @app.route('/home')
 @app.route('/')
 def home():
+	#home page show top bought games, top favorited games
+	#inner join to get names of games from games table
 	try:
-		cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY ");
+		cur.execute("SELECT games.name, games.appid FROM mat_top10_bought,games where games.appid=mat_top10_bought.appid");
+		rows = cur.fetchall()
+		top10bought = []
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["name"] = tup[0]
+				D["appid"] = tup[1]
+				top10bought.append(D)
+
+		cur.execute("SELECT games.name, games.appid FROM mat_top10_fav,games where games.appid=mat_top10_fav.appid");
+		rows = cur.fetchall()
+		top10fav = []
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["name"] = tup[0]
+				D["appid"] = tup[1]
+				top10fav.append(D)
+		# if user is logged in then recommended games for you
+		conn.commit()
+		return render_template('home.html', user="DEFAULT", top10fav=top10fav, top10bought=top10bought)
+	except Exception as e:
+		conn.rollback()
+		print("home", e)
+		return "Some error occured"
+
+
+@app.route('/all_games')
+def all_games():
+	try:
+		cur.execute("SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY ");
 		rows = cur.fetchall()
 		games = []
 		if len(rows)>0:
@@ -26,6 +60,8 @@ def home():
 				D["release_date"] = tup[1]
 				D["appid"] = tup[2]
 				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
+				D["positive_ratings"] = tup[4]
+				D["negative_ratings"] = tup[5]
 				games.append(D)
 		cur.execute("SELECT count(*) from games")
 		rows = cur.fetchall()
@@ -34,10 +70,10 @@ def home():
 		else:
 			totalRows = 0
 		conn.commit()
-		return render_template('home.html', user="DEFAULT",games = games, totalRows=totalRows)
+		return render_template('all_games.html', user="DEFAULT",games = games, totalRows=totalRows)
 	except Exception as e:
 		conn.rollback()
-		print("home",e)
+		print("all_games",e)
 		return "Some error occured"
 
 #return game description, website url, support url, tags and requirements using appid
@@ -215,12 +251,34 @@ def searchGames():
 	if request.method == 'POST':
 		searchString = request.form.get('string').replace("'","&#39")
 		page_num = request.form.get('page_num').replace("'","&#39")
+		method = request.form.get('method').replace("'","&#39")
 		if searchString=="" or page_num=="" or int(page_num)<=0:
 			return json.dumps("[]")
 		page_num = int(page_num)
 		searchString = searchString.lower() #to remove any caps problem
+
+		if method == 'release_date_asc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY release_date ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'release_date_desc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY release_date DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'price_asc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY (price::float) ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'price_desc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY (price::float) DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'positive_ratings_asc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY positive_ratings ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'positive_ratings_desc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'negative_ratings_asc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY negative_ratings ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'negative_ratings_desc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY negative_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		else:
+			#default by positive ratings
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		
 		try:
-			cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ");
+			cur.execute(query);
 		except Exception as e:
 			print("searchGames1",e)
 			conn.rollback()
@@ -234,6 +292,8 @@ def searchGames():
 				D["release_date"] = str(tup[1])
 				D["appid"] = tup[2]
 				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
+				D["positive_ratings"] = tup[4]
+				D["negative_ratings"] = tup[5]
 				games.append(D)
 		#for counting total matching games
 		try:
@@ -257,10 +317,30 @@ def searchGames():
 def getGames():
 	if request.method == 'POST':
 		page_num = request.form.get('page_num').replace("'","&#39")
+		method = request.form.get('method').replace("'","&#39")
+		if method == 'release_date_asc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY release_date ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'release_date_desc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY release_date DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'price_asc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY (price::float) ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'price_desc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY (price::float) DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'positive_ratings_asc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'positive_ratings_desc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'negative_ratings_asc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY negative_ratings ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		elif method == 'negative_ratings_desc':
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY negative_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+		else:
+			#default by positive ratings DESC
+			query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
 		if int(page_num)<=0:
 			return json.dumps("[]")
 		try:
-			cur.execute("SELECT name,release_date,appid,price FROM games WHERE appid IS NOT NULL ORDER BY positive_ratings DESC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ");
+			cur.execute(query);
 			rows = cur.fetchall()
 			games = []
 			if len(rows)>0:
@@ -270,6 +350,8 @@ def getGames():
 					D["release_date"] = str(tup[1])
 					D["appid"] = tup[2]
 					D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
+					D["positive_ratings"] = tup[4]
+					D["negative_ratings"] = tup[5]
 					games.append(D)
 			conn.commit()
 			return json.dumps(games)
@@ -531,7 +613,7 @@ def add_game():
 	try:
 		cur.execute("insert into transactions values ("+str(appid)+", '" + str(username) +"', " + str(price) + ", " + str(ts) +")")
 		conn.commit()
-		return appid + " added to you library."
+		return "game is added to your library."
 	except Exception as e:
 		print('Exception')
 		print(e)
@@ -666,3 +748,34 @@ def getMoneyOfUser():
 			conn.rollback()
 			print("getMoneyOfUser",e)
 			return "unable to fetch money"
+	else:
+		return "Invalid request"
+
+
+@app.route('/submit_review', methods=['POST'])
+def add_review():
+	if request.method == 'POST':
+		review_text = request.form.get('review_text').replace("'","&#39")
+		appid = request.form.get('appid').replace("'","&#39")
+		if 'user' in session:
+			username = session['user']
+		else:
+			username = ""
+		#to check whether given user owns this game or not then only allow him to submit review
+		cur.execute("SELECT * from transactions where appid="+appid+" AND username='"+username+"'")
+		rows = cur.fetchall()
+		if len(rows)>0:
+			try:
+				#given user has the rights to review this game
+				cur.execute('''
+							INSERT INTO reviews (username, appid,review,found_funny,hours,date)
+							VALUES ('{username}',{appid},'{review_text}',0,0,'{today_date}')
+							'''.format(username=username, appid=appid, review_text=review_text, today_date=datetime.today().strftime('%Y-%m-%d')))
+				conn.commit()
+				return "successfully submitted your review"
+			except Exception as e:
+				conn.rollback()
+				print("addReview",e)
+				return "some error occured"
+	else:
+		return "Invalid request"

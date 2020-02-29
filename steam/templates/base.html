@@ -24,14 +24,14 @@
       }
       </style>
     </head>
-    <body style="background-color: #E3F274; overflow-x: hidden;">
+    <body style="background-color: #F1FAB9; overflow-x: hidden;">
         {% if 'user' not in session %}
         <div class="row">
           <div class="col-md-1"> <a class="btn btn-primary stretched-link" href="/home">Home</a>  </div>
           <div class="col-md-9"></div>
           <div class="col-md-2">
-            <a class="btn btn-primary stretched-link" href="/games">Games</a> 
-            <a class="btn btn-primary stretched-link" href="/login">Login</a> 
+            <a class="btn btn-primary stretched-link" href="/all_games">Games</a> 
+            <a class="btn btn-success stretched-link" href="/login">Login</a> 
             <a class="btn btn-primary stretched-link" href="/register">Register</a>
           </div>
         </div>
@@ -42,9 +42,9 @@
           <div class="col-md-1"> <a class="btn btn-primary stretched-link" href="/home">Home</a>  </div>
           <div class="col-md-8"></div>
           <div class="col-md-3">
-            <a class="btn btn-primary stretched-link" href="/games">Games</a> 
+            <a class="btn btn-primary stretched-link" href="/all_games">Games</a> 
             <a class="btn btn-primary stretched-link" href="/profile">My Profile</a> 
-            <a class="btn btn-primary stretched-link" href="/logout">Logout</a>
+            <a class="btn btn-danger stretched-link" href="/logout">Logout</a>
             <a class="btn btn-primary stretched-link" href="/wallet">My Wallet</a>
           </div>
         </div>
