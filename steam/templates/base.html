@@ -8,29 +8,48 @@
       <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
       <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+      <style>
+      table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse;
+        word-wrap: break-word;
+      }
+      th, td {
+        padding: 5px;
+        text-align: left;    
+      }
+
+      #table{
+        background-color: white
+      }
+      </style>
     </head>
-    <body>
+    <body style="background-color: #E3F274; overflow-x: hidden;">
         {% if 'user' not in session %}
-        <div>
-          &nbsp<a class="btn btn-primary stretched-link" href="/home">Home</a> 
-          <a class="btn btn-primary stretched-link" href="/games">Games</a> 
-          <a class="btn btn-primary stretched-link" href="/login">Login</a> 
-          <a class="btn btn-primary stretched-link" href="/register">Register</a>
+        <div class="row">
+          <div class="col-md-1"> <a class="btn btn-primary stretched-link" href="/home">Home</a>  </div>
+          <div class="col-md-9"></div>
+          <div class="col-md-2">
+            <a class="btn btn-primary stretched-link" href="/games">Games</a> 
+            <a class="btn btn-primary stretched-link" href="/login">Login</a> 
+            <a class="btn btn-primary stretched-link" href="/register">Register</a>
+          </div>
         </div>
         {% endif %}
 
         {% if 'user' in session %}
-        <div>
-          &nbsp<a class="btn btn-primary stretched-link" href="/home">Home</a> 
-          <a class="btn btn-primary stretched-link" href="/games">Games</a> 
-          <a class="btn btn-primary stretched-link" href="/profile">Profile</a> 
-          <a class="btn btn-primary stretched-link" href="/logout">Logout</a>
-          <a class="btn btn-primary stretched-link" href="/wallet">My Wallet</a>
+        <div class="row">
+          <div class="col-md-1"> <a class="btn btn-primary stretched-link" href="/home">Home</a>  </div>
+          <div class="col-md-8"></div>
+          <div class="col-md-3">
+            <a class="btn btn-primary stretched-link" href="/games">Games</a> 
+            <a class="btn btn-primary stretched-link" href="/profile">My Profile</a> 
+            <a class="btn btn-primary stretched-link" href="/logout">Logout</a>
+            <a class="btn btn-primary stretched-link" href="/wallet">My Wallet</a>
+          </div>
         </div>
-        <h4> You are logged in as <strong>{{session['user']}}</strong>.</h4>
-
+        <h4 style="color: #BC3FCC"> You are logged in as <strong>{{session['user']}}</strong>.</h4>
         {% endif %}
-        
         
         {% block content %}{% endblock %}
     </body>

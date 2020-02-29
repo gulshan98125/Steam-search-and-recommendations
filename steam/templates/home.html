@@ -1,16 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-	<style>
-	table, th, td {
-	  border: 1px solid black;
-	  border-collapse: collapse;
-	}
-	th, td {
-	  padding: 5px;
-	  text-align: left;    
-	}
-	</style>
-
 	<!-- only when user is admin below code inside if else will run-->
 	{% if 'admin' in session %}
 		<style type="text/css">
@@ -88,12 +77,12 @@
 		        	Developers: <input type="text" id="developers" name="developers" placeholder=" ; seperated"><br>
 		        	Publishers: <input type="text" id="publishers" name="publishers" placeholder=" ; seperated"><br>
 		        	Platforms: <input type="text" id="platforms" name="platforms" placeholder=" ; seperated"><br>
-		        	Required Age: <input type="text" id="required_age" name="required_age" placeholder=" Integer"><br>
+		        	Required Age: <input type="number" id="required_age" name="required_age" placeholder=" Integer"><br>
 		        	Categories:<input type="text" id="categories" name="categories" placeholder=" ; seperated"><br>
 		        	Genres: <input type="text" id="genres" name="genres" placeholder=" ; seperated"><br>
 		        	Tags: <input type="text" id="tags" name="tags" placeholder=" ; seperated"><br>
 		        	Achievements: <input type="text" id="achievements" name="achievements" placeholder=" Integer"><br>
-		        	Price: <input type="text" id="price" name="price" placeholder=" in INR"><br>
+		        	Price: <input type="number" id="price" name="price" placeholder=" in INR"><br>
 		        	<button onclick="addGameRequest()"> Add game </button>
 		        </div>
 		    </div>
@@ -135,7 +124,7 @@
 	<br>
 	<br>
 	{% endif %}
-	&nbsp&nbsp<input type="text" id="searchBar" name="fname" placeholder="search by name">
+	&nbsp&nbsp<input type="text" id="searchBar" name="fname" placeholder="search games by name">
 	<Button id="searchButton" onclick="search()"> Search </Button> <br>
 	
 	<br>

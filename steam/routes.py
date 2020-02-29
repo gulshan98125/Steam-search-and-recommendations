@@ -9,7 +9,7 @@ import datetime
 import psycopg2
 import time
 
-conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "project")
+conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
 cur = conn.cursor()
 
 @app.route('/home')
@@ -84,6 +84,16 @@ def game_details():
 			windows_requirements = None
 			mac_requirements = None
 			linux_requirements = None
+
+		cur.execute("SELECT * FROM tags WHERE appid="+str(appid));
+		rows = cur.fetchall()
+		tags = []
+		if len(rows)>0:
+			tup = rows[0]
+			for i in range(0,len(TAGS_LIST)):
+				if int(tup[i+1])>0:
+					tags.append(TAGS_LIST[i])
+
 		cur.execute("SELECT * FROM games WHERE appid="+str(appid))
 		rows = cur.fetchall()
 		if len(rows)>0:
@@ -95,7 +105,7 @@ def game_details():
 			variables["platforms"] = tup[6].split(";") #list
 			variables["required_age"] = tup[7]
 			variables["genres"] = tup[9]
-			variables["tags"] = tup[10].split(";") #list
+			variables["tags"] = tags
 			variables["achievements "] = tup[11]
 			variables["positive_ratings"] = tup[12]
 			variables["negative_ratings"] = tup[13]
@@ -110,7 +120,7 @@ def game_details():
 			variables["platforms"] = None
 			variables["required_age"] = None
 			variables["genres"] = None # ; seperated
-			variables["tags"] = None # ; seperated
+			variables["tags"] = [] # ; seperated
 			variables["achievements "] =  None
 			variables["positive_ratings"] =  None
 			variables["negative_ratings"] =  None
@@ -459,7 +469,7 @@ def get_fav():
 				D["name"] = tup[0]
 				D["release_date"] = tup[1]
 				D["appid"] = tup[2]
-				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "unknown" #in inr
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
 				games.append(D)
 		return render_template('fav_games.html', games = games)
 	except Exception as e:

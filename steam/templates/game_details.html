@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-	<h1> Game : {{vars.name}} </h1>
-
+	<h1 align="center"> Game : {{vars.name}} </h1>
+	<div align="center">
 	<button onclick="window.open('/reviews?appid={{vars.appid}}&page_num=1')" class="btn btn-dark"> Reviews </button>
 	<button onclick="window.open('/screenshots?appid={{vars.appid}}')" class="btn btn-dark"> Screenshots </button>
 	{% if vars.website %}
@@ -68,7 +68,7 @@
 					{% if vars.price and vars.price|float <= vars.user_money|float %}
 					<p>Money in wallet after purchase: <strong>{{vars.user_money|float - vars.price|float}}</strong> </p>
 					<button type="button" onclick="update_wallet_and_buy()" class="btn btn-primary">
-						Update Wallet and Buy Game
+						Buy Game
 					</button>
 				  	{% endif %}
 
@@ -102,24 +102,30 @@
 		  </div>
 
 	{% endif %}
+	
 
 	{% if vars.price %}
 		<h3> Price: Rs. {{vars.price}} </h3>
 	{% else %}
 		<h3> Price: FREE </h3>
 	{% endif %}
+	</div>
 
 	{% if vars.description %}
 		<h1> Description: </h1>
-		<div style="height: 400px; overflow: scroll; background-color: #AAFFF0"> 
-			<div> {{vars.description | safe}} </div>
+		<div class="row" style="color: black">
+			<div class="col-md-1"> </div>
+			<div class="col-md-10" style="max-height: 400px; overflow: scroll; background-color: #974068; color: white" display: inline-block;> 
+				<div> {{vars.description | safe}} </div>
+			</div>
 		</div>
-		
 	{% endif %}
 
 	{% if vars.windows_requirements or vars.mac_requirements or vars.linux_requirements %}
-		<h1> Requirements: </h1>
-		<div style="height: 400px; overflow: scroll; background-color: #ACFF92">
+	<h1> Requirements: </h1>
+	<div class="row" style="color: white">
+		<div class="col-md-1"> </div>
+		<div class="col-md-10" style="max-height: 400px; overflow: scroll; background-color: #4F6AC4" display: inline-block;> 
 			{% if vars.windows_requirements %}
 			<h2> Windows: </h2>
 			{{vars.windows_requirements | safe}}
@@ -133,14 +139,20 @@
 			{{vars.linux_requirements | safe}}
 			{% endif %}
 		</div>
-		
+	</div>	
 	{% endif %}
 
 	{% if vars.tags %}
-		<h1> Tags: </h1>
-		{% for tag in vars.tags %}
-			{{tag}} ,
-		{% endfor %}
+	<h1> Tags: </h1>
+	<div class="row">
+		<div class="col-md-1"> </div>
+		<div class="col-md-10">
+			{% for tag in vars.tags %}
+				<b>{{tag}}<b> ,
+			{% endfor %}	
+		</div>
+
+	</div>
 	{% endif %}
 
 <!-- 
