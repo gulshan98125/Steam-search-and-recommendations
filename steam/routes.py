@@ -6,12 +6,23 @@ from flask import redirect, url_for, flash, session
 from .constants import *
 import hashlib
 import datetime
+import numpy as np
 import psycopg2
+from scipy import spatial
 import time
 from datetime import datetime
 
 conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
 cur = conn.cursor()
+
+cur.execute("select * from tags")
+full_tags_table = cur.fetchall()
+movie_vec_list = []
+for tup in full_tags_table:
+	appid = tup[0]
+	movie_vec = np.array(tup[1:])
+	movie_vec = movie_vec / np.sum(movie_vec)
+	movie_vec_list.append((appid,movie_vec))
 
 @app.route('/home')
 @app.route('/')
@@ -39,8 +50,9 @@ def home():
 				D["appid"] = tup[1]
 				top10fav.append(D)
 		# if user is logged in then recommended games for you
+		recommended = getRecommended()
 		conn.commit()
-		return render_template('home.html', user="DEFAULT", top10fav=top10fav, top10bought=top10bought)
+		return render_template('home.html', user="DEFAULT", top10fav=top10fav, top10bought=top10bought, recommended=recommended)
 	except Exception as e:
 		conn.rollback()
 		print("home", e)
@@ -828,3 +840,52 @@ def movies():
 		print("movies",e)
 		conn.rollback()
 		return "Some error occured"
+
+
+def getRecommended():
+	#given a username, generate recommendation for that user
+	if 'user' in session:
+		username = session['user']
+	else:
+		return "Not logged in"
+
+	user_vec = np.zeros(len(TAGS_LIST))
+	users_favorited = set() #appid consisting of already users favorites
+	count = 0
+	#first generate tag vector of this user using his favorites and taking average of all the tags
+	cur.execute("select * from tags,favourites where username='"+username+"' AND tags.appid=favourites.appid")
+	rows = cur.fetchall()
+	for tup in rows:
+		appid = tup[0]
+		users_favorited.add(appid)
+		row_vec = np.array(tup[1:-3]) #to trim out some columns not in tags
+		row_vec = row_vec/np.sum(row_vec)
+		user_vec += row_vec
+		count += 1
+	user_vec = user_vec/count #to take average
+	# print(user_vec)
+	# print(len(user_vec))
+	# print(len(TAGS_LIST))
+	#go over the tags table and find the consine similarity corresponding to the appid in the tag table
+	recommended = []
+	for vec_tup in movie_vec_list:
+		similarity = 1 - spatial.distance.cosine(user_vec, vec_tup[1])
+		recommended.append((vec_tup[0],similarity))
+	recommended.sort(key=lambda x: x[1] ,reverse=True)
+	recommended = [x[0] for x in recommended if x[0] not in users_favorited][:5]
+	if(len(recommended)<5):
+		#very rare case
+		recommended.extend([10,10,10,10,10])
+		recommended = recommended[:5]
+
+	cur.execute('''
+				SELECT appid,name from games where appid={one} or appid={two} or appid={three} or appid={four} or appid={five}
+				'''.format(one=recommended[0],two=recommended[1],three=recommended[2],four=recommended[3],five=recommended[4]))
+	rows = cur.fetchall()
+	result = []
+	for tup in rows:
+		D = {}
+		D["appid"] = tup[0]
+		D["name"] = tup[1]
+		result.append(D)
+	return result
