@@ -365,63 +365,72 @@ def getGames():
 @app.route('/manageUser', methods=['GET','POST'])
 def manageUser():
 	#when admin is user then only open this page
-	if request.method == 'GET':
-		page_num = 1
+	if 'admin' in session:
+		if request.method == 'GET':
+			page_num = 1
+		else:
+			page_num = request.form.get('page_num').replace("'","&#39")
+		page_num = int(page_num)
+		if page_num <=0:
+			return "Bad page number"
+		try:
+			cur.execute("SELECT username, isbanned FROM users WHERE isadmin=false ORDER BY username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ")
+			rows = cur.fetchall()
+			userslist = []
+			for tup in rows:
+				userObj = {}
+				userObj['username'] = tup[0]
+				userObj['isbanned'] = str(tup[1]).lower()
+				userslist.append(userObj)
+			# conn.commit()
+			return render_template('manage_user.html',user="DEFAULT", userslist = userslist)
+		except Exception as e:
+			# conn.rollback()
+			print("manageUser",e)
+			return "Some error occured"
 	else:
-		page_num = request.form.get('page_num').replace("'","&#39")
-	page_num = int(page_num)
-	if page_num <=0:
-		return "Bad page number"
-	try:
-		cur.execute("SELECT username, isbanned FROM users WHERE isadmin=false ORDER BY username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ")
-		rows = cur.fetchall()
-		userslist = []
-		for tup in rows:
-			userObj = {}
-			userObj['username'] = tup[0]
-			userObj['isbanned'] = str(tup[1]).lower()
-			userslist.append(userObj)
-		# conn.commit()
-		return render_template('manage_user.html',user="DEFAULT", userslist = userslist)
-	except Exception as e:
-		# conn.rollback()
-		print("manageUser",e)
-		return "Some error occured"
+		return "you don't have rights to perform this action"
 
 
 @app.route('/banUser', methods=['POST'])
 def banUser():
 	#only when the request is made by admin
-	if request.method == 'POST':
-		username = request.form.get('username').replace("'","&#39")
-		username = str(username)
-		try:
-			cur.execute("UPDATE users SET isbanned=true WHERE username='"+username+"'")
-			conn.commit()
-			return "successfully banned user "+ username
-		except Exception as e:
-			conn.rollback()
-			print("banuser",e)
-			return "Some error occured"
+	if 'admin' in session:
+		if request.method == 'POST':
+			username = request.form.get('username').replace("'","&#39")
+			username = str(username)
+			try:
+				cur.execute("UPDATE users SET isbanned=true WHERE username='"+username+"'")
+				conn.commit()
+				return "successfully banned user "+ username
+			except Exception as e:
+				conn.rollback()
+				print("banuser",e)
+				return "Some error occured"
+		else:
+			return "Bad request"
 	else:
-		return "Bad request"
+		return "you don't have rights to perform this action"
 
 @app.route('/unbanUser', methods=['POST'])
 def unbanUser():
 	#only when the request is made by admin
-	if request.method == 'POST':
-		username = request.form.get('username').replace("'","&#39")
-		username = str(username)
-		try:
-			cur.execute("UPDATE users SET isbanned=false WHERE username='"+username+"'")
-			conn.commit()
-			return "unbanned user "+ username
-		except Exception as e:
-			print("unbanuser", e)
-			conn.rollback()
-			return "Some error occured"
+	if 'admin' in session:
+		if request.method == 'POST':
+			username = request.form.get('username').replace("'","&#39")
+			username = str(username)
+			try:
+				cur.execute("UPDATE users SET isbanned=false WHERE username='"+username+"'")
+				conn.commit()
+				return "unbanned user "+ username
+			except Exception as e:
+				print("unbanuser", e)
+				conn.rollback()
+				return "Some error occured"
+		else:
+			return "Bad request"
 	else:
-		return "Bad request"
+		return "you don't have rights to perform this action"
 
 @app.route('/register')
 def register():
@@ -532,7 +541,7 @@ def toggle_fav():
 		else:
 			cur.execute("insert into favourites values ("+str(appid)+", '" + str(username) +"')")
 			conn.commit()
-			return str(appid) + " added to favourites"
+			return "game has been added to favourites"
 	except Exception as e:
 		print('Exception')
 		print(e)
@@ -643,71 +652,77 @@ def game_lib():
 @app.route('/addMoney', methods=['POST'])
 def addMoney():
 	#only admin can use this method
-	if request.method == 'POST':
-		username = request.form.get('username').replace("'","&#39")
-		amount = request.form.get('amount').replace("'","&#39")
-		username = str(username)
-		amount = round(float(amount),2)
-		try:
-			cur.execute("UPDATE wallets SET money = money+"+str(amount)+" WHERE username='"+username+"'")
-			conn.commit()
-			return "added money to wallet of user "+ username
-		except Exception as e:
-			print("addMoney",e)
-			conn.rollback()
-			return "Some error occured!"
+	if 'admin' in session:
+		if request.method == 'POST':
+			username = request.form.get('username').replace("'","&#39")
+			amount = request.form.get('amount').replace("'","&#39")
+			username = str(username)
+			amount = round(float(amount),2)
+			try:
+				cur.execute("UPDATE wallets SET money = money+"+str(amount)+" WHERE username='"+username+"'")
+				conn.commit()
+				return "added money to wallet of user "+ username
+			except Exception as e:
+				print("addMoney",e)
+				conn.rollback()
+				return "Some error occured!"
+		else:
+			return "Bad request"
 	else:
-		return "Bad request"
+		return "you don't have rights to perform this action"
 
 
 @app.route('/addGame', methods=['POST'])
 def addGame():
 	#only admin can call this function
-	if request.method == 'POST':
-		name = request.form.get('name').replace("'","&#39")
-		release_date = request.form.get('release_date')
-		description = request.form.get('description').replace("'","&#39")
-		developers = request.form.get('developers').replace("'","&#39")
-		publishers = request.form.get('publishers').replace("'","&#39")
-		platforms = request.form.get('platforms').replace("'","&#39")
-		required_age = request.form.get('required_age')
-		categories = request.form.get('categories').replace("'","&#39")
-		genres = request.form.get('genres').replace("'","&#39")
-		tags = request.form.get('tags').replace("'","&#39")
-		achievements = request.form.get('achievements')
-		price = request.form.get('price')
-		price = float(price)
-		price /=93.13 #to convert to gbp
-		try:
-			cur.execute("SELECT MAX(appid) from games");
-			rows = cur.fetchall()
-			appidmax = int(rows[0][0])
-			newappid = appidmax+1
-		except Exception as e:
-			print("addGame1",e)
-			conn.rollback()
-			return "Some error occured1!"
-		
-		try:
-			cur.execute(
-						'''
-						INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
-						VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
-						'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
-							genres=genres,tags=tags,achievements=achievements,price=str(price))
-						)
-			cur.execute('''
-						INSERT INTO games_description (appid, detailed_description, about_game, short_description)
-						VALUES ({newappid}, '{description}', '{description}', '{description}')
-						'''.format(newappid=newappid, description=description))
-			conn.commit()
-			return "added game "+name
-		except Exception as e:
-			print("addGame2",e)
-			conn.rollback()
-			return "Some error occured2!"
+	if 'admin' in session:
+		if request.method == 'POST':
+			name = request.form.get('name').replace("'","&#39")
+			release_date = request.form.get('release_date')
+			description = request.form.get('description').replace("'","&#39")
+			developers = request.form.get('developers').replace("'","&#39")
+			publishers = request.form.get('publishers').replace("'","&#39")
+			platforms = request.form.get('platforms').replace("'","&#39")
+			required_age = request.form.get('required_age')
+			categories = request.form.get('categories').replace("'","&#39")
+			genres = request.form.get('genres').replace("'","&#39")
+			tags = request.form.get('tags').replace("'","&#39")
+			achievements = request.form.get('achievements')
+			price = request.form.get('price')
+			price = float(price)
+			price /=93.13 #to convert to gbp
+			try:
+				cur.execute("SELECT MAX(appid) from games");
+				rows = cur.fetchall()
+				appidmax = int(rows[0][0])
+				newappid = appidmax+1
+			except Exception as e:
+				print("addGame1",e)
+				conn.rollback()
+				return "Some error occured1!"
+			
+			try:
+				cur.execute(
+							'''
+							INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
+							VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
+							'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
+								genres=genres,tags=tags,achievements=achievements,price=str(price))
+							)
+				cur.execute('''
+							INSERT INTO games_description (appid, detailed_description, about_game, short_description)
+							VALUES ({newappid}, '{description}', '{description}', '{description}')
+							'''.format(newappid=newappid, description=description))
+				conn.commit()
+				return "added game "+name
+			except Exception as e:
+				print("addGame2",e)
+				conn.rollback()
+				return "Some error occured2!"
+		else:
+			return "Bad request"
 	else:
-		return "Bad request"
+		return "you don't have rights to perform this action"
 
 
 # @app.route('/admin')
@@ -717,18 +732,21 @@ def addGame():
 @app.route('/deleteGame', methods=['POST'])
 def deleteGame():
 	#only admin can call this function
-	if request.method == 'POST':
-		appid = request.form.get('appid')
-		try:
-			cur.execute("DELETE FROM games where appid="+str(appid));
-			conn.commit()
-			return "successfully deleted!"
-		except Exception as e:
-			print("deleteGame",e)
-			conn.rollback()
-			return "Some error occured!"
+	if 'admin' in session:
+		if request.method == 'POST':
+			appid = request.form.get('appid')
+			try:
+				cur.execute("DELETE FROM games where appid="+str(appid));
+				conn.commit()
+				return "successfully deleted!"
+			except Exception as e:
+				print("deleteGame",e)
+				conn.rollback()
+				return "Some error occured!"
+		else:
+			return "Invalid request"
 	else:
-		return "Invalid request"
+		return "you don't have rights to perform this action"
 
 
 @app.route('/getMoneyOfUser', methods=['POST'])

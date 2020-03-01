@@ -113,7 +113,7 @@
 				  </button>
 				</div>
 				<div class="modal-body">
-					<p><strong>Wallet</strong>: Rs. {{vars.user_money}}</p>
+					<p><strong>Wallet</strong>: Rs. {{'%0.2f'|format(vars.user_money)}}</p>
 
 					<table class="table table-hover">
 						<thead>
@@ -137,7 +137,7 @@
 					{% endif %}
 
 					{% if vars.price and vars.price|float <= vars.user_money|float %}
-					<p>Money in wallet after purchase: <strong>{{vars.user_money|float - vars.price|float}}</strong> </p>
+					<p>Money in wallet after purchase: <strong>{{'%0.2f'|format(vars.user_money|float - vars.price|float)}}</strong> </p>
 					<button type="button" onclick="update_wallet_and_buy()" class="btn btn-primary">
 						Buy Game
 					</button>
@@ -186,7 +186,7 @@
 		<h1> Description: </h1>
 		<div class="row" style="color: black">
 			<div class="col-md-1"> </div>
-			<div class="col-md-10" style="max-height: 400px; overflow: scroll; background-color: #974068; color: white" display: inline-block;> 
+			<div class="col-md-10" style="max-height: 400px; overflow: scroll; background-color: #000000; color: white" display: inline-block;> 
 				<div> {{vars.description | safe}} </div>
 			</div>
 		</div>
