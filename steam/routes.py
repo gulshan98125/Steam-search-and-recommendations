@@ -797,3 +797,34 @@ def add_review():
 				return "some error occured"
 	else:
 		return "Invalid request"
+
+@app.route('/movies')
+def movies():
+	appid = request.args.get('appid').replace("'","&#39") ###
+	if appid == None:
+		return "No appid provided"
+	try:
+		cur.execute("SELECT movies FROM media_data WHERE appid="+str(appid))
+		rows = cur.fetchall()
+		res = []
+		conn.commit()
+		if len(rows)>0:
+			if not rows[0][0]:
+				return "there are no videos for this game"
+			for movobj in ast.literal_eval(rows[0][0]):
+				try:
+					D = {}
+					D['name'] = movobj['name']
+					D['thumbnail'] = movobj['thumbnail']
+					D['lqlink'] = movobj['webm']['480']
+					D['hqlink'] = movobj['webm']['max']
+					res.append(D)
+				except:
+					continue
+			return render_template('movies.html',user="DEFAULT",movies=res)
+		else:
+			return "ERROR"
+	except Exception as e:
+		print("movies",e)
+		conn.rollback()
+		return "Some error occured"

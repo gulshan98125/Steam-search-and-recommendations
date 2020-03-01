@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+	<style>
+	table, th, td {
+	  border: 1px solid black;
+	  border-collapse: collapse;
+	  background-color: white
+	}
+	th, td {
+	  padding: 5px;
+	  text-align: left;    
+	}
+	</style>
+	<table align="center">
+	{% if movies %}
+		  {% for movObj in movies %}
+		  	<tr>
+		  		<td>
+		  			<div align="center">
+		  				{{movObj.name}}<br>
+		  				<img src="{{movObj.thumbnail}}"><br>
+		  				<a href="{{movObj.lqlink}}"> low quality </a> <a href="{{movObj.hqlink}}"> high quality </a>
+		  			</div>
+		  			
+		  		</td>
+		  	</tr>
+		  {% endfor %}
+	{% endif %}
+	</table>
+{% endblock %}
+
