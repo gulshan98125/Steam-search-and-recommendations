@@ -872,20 +872,27 @@ def getRecommended():
 		similarity = 1 - spatial.distance.cosine(user_vec, vec_tup[1])
 		recommended.append((vec_tup[0],similarity))
 	recommended.sort(key=lambda x: x[1] ,reverse=True)
-	recommended = [x[0] for x in recommended if x[0] not in users_favorited][:5]
-	if(len(recommended)<5):
+	simValues = [x[1] for x in recommended if x[0] not in users_favorited][:10]
+	recommended = [x[0] for x in recommended if x[0] not in users_favorited][:10]
+	if(len(recommended)<10):
 		#very rare case
-		recommended.extend([10,10,10,10,10])
-		recommended = recommended[:5]
+		recommended.extend([10,10,10,10,10,10,10,10,10,10])
+		recommended = recommended[:10]
 
 	cur.execute('''
 				SELECT appid,name from games where appid={one} or appid={two} or appid={three} or appid={four} or appid={five}
-				'''.format(one=recommended[0],two=recommended[1],three=recommended[2],four=recommended[3],five=recommended[4]))
+				or appid={six} or appid={seven} or appid={eight} or appid={nine} or appid={ten}
+				'''.format(one=recommended[0],two=recommended[1],three=recommended[2],four=recommended[3],five=recommended[4],
+					six=recommended[5], seven=recommended[6], eight=recommended[7], nine=recommended[8], ten=recommended[9],))
 	rows = cur.fetchall()
 	result = []
+	hashmap = {}
 	for tup in rows:
+		hashmap[tup[0]] = tup[1]
+	for i in range(len(recommended)):
 		D = {}
-		D["appid"] = tup[0]
-		D["name"] = tup[1]
+		D["appid"] = recommended[i]
+		D["name"] = hashmap[recommended[i]]
+		D["similarity"] = simValues[i]
 		result.append(D)
 	return result
