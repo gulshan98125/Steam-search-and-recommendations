@@ -1,39 +1,86 @@
 {% extends "base.html" %}
 {% block content %}
 	<div class="row">
-		<div class="col-md-1"></div>
-		<div class="col-md-4" id="table">
-			<h2>TOP bought games:</h2>
-			<table style="width:100%">
-				  <tr>
-				    <th>Game name</th>
-				  </tr>
-				  {% if top10bought %}
-				  	{% for gameObj in top10bought %}
-				  		<tr>
-				  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
-				  		</tr>
-				  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
-				  	{% endfor %}
-				  {% endif %}
-			</table>
-		</div>
-		<div class="col-md-1"></div>
-		<div class="col-md-4" id="table">
-			<h2>TOP favorited games: </h2>
-			<table style="width:100%">
-				  <tr>
-				    <th>Game name</th>
-				  </tr>
-				  {% if top10fav %}
-				  	{% for gameObj in top10fav %}
-				  		<tr>
-				  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
-				  		</tr>
-				  		<!-- <li> <a href="/game_details?appid={{gameObj.appid}}"> {{gameObj.name}}, {{gameObj.release_date}} </a> </li> -->
-				  	{% endfor %}
-				  {% endif %}
-			</table>
-		</div>
+		{% if 'user' in session or 'admin' in session %}
+			<div class="col-md-1"></div>
+			<div class="col-md-3" id="table">
+				<h2>TOP bought games:</h2>
+				<table style="width:100%">
+					  <tr>
+					    <th>Game name</th>
+					  </tr>
+					  {% if top10bought %}
+					  	{% for gameObj in top10bought %}
+					  		<tr>
+					  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
+					  		</tr>
+					  	{% endfor %}
+					  {% endif %}
+				</table>
+			</div>
+			<div class="col-md-3" id="table">
+				<h2>TOP favorited games: </h2>
+				<table style="width:100%;">
+					  <tr>
+					    <th>Game name</th>
+					  </tr>
+					  {% if top10fav %}
+					  	{% for gameObj in top10fav %}
+					  		<tr>
+					  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
+					  		</tr>
+					  	{% endfor %}
+					  {% endif %}
+				</table>
+			</div>
+			<div class="col-md-3" style="background-color: #f59ac0">
+				<h2>Recommended games:</h2>
+				<table style="width:100%; background-color: white">
+					  <tr>
+					    <th>Game name</th>
+					  </tr>
+					  {% if recommended %}
+					  	{% for Obj in recommended %}
+					  		<tr>
+					  		  <td><a href="/game_details?appid={{Obj.appid}}">{{Obj.name}}</a></td>
+					  		</tr>
+					  	{% endfor %}
+					  {% endif %}
+				</table>
+			</div>
+		{% else %}
+			<div class="col-md-1"></div>
+			<div class="col-md-4" id="table">
+				<h2>TOP bought games:</h2>
+				<table style="width:100%">
+					  <tr>
+					    <th>Game name</th>
+					  </tr>
+					  {% if top10bought %}
+					  	{% for gameObj in top10bought %}
+					  		<tr>
+					  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
+					  		</tr>
+					  	{% endfor %}
+					  {% endif %}
+				</table>
+			</div>
+			<div class="col-md-1"></div>
+			<div class="col-md-4" id="table">
+				<h2>TOP favorited games: </h2>
+				<table style="width:100%;">
+					  <tr>
+					    <th>Game name</th>
+					  </tr>
+					  {% if top10fav %}
+					  	{% for gameObj in top10fav %}
+					  		<tr>
+					  		  <td><a href="/game_details?appid={{gameObj.appid}}">{{gameObj.name}}</a></td>
+					  		</tr>
+					  	{% endfor %}
+					  {% endif %}
+				</table>
+			</div>
+		{% endif %}
 	</div>
 {% endblock %}

@@ -6,7 +6,9 @@ from flask import redirect, url_for, flash, session
 from .constants import *
 import hashlib
 import datetime
+import numpy as np
 import psycopg2
+from scipy import spatial
 import time
 from datetime import datetime
 
@@ -14,6 +16,15 @@ from datetime import datetime
 conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "proj_temp")
 #conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
 cur = conn.cursor()
+
+cur.execute("select * from tags")
+full_tags_table = cur.fetchall()
+movie_vec_list = []
+for tup in full_tags_table:
+	appid = tup[0]
+	movie_vec = np.array(tup[1:])
+	movie_vec = movie_vec / np.sum(movie_vec)
+	movie_vec_list.append((appid,movie_vec))
 
 @app.route('/home')
 @app.route('/')
@@ -41,8 +52,9 @@ def home():
 				D["appid"] = tup[1]
 				top10fav.append(D)
 		# if user is logged in then recommended games for you
+		recommended = getRecommended()
 		conn.commit()
-		return render_template('home.html', user="DEFAULT", top10fav=top10fav, top10bought=top10bought)
+		return render_template('home.html', user="DEFAULT", top10fav=top10fav, top10bought=top10bought, recommended=recommended)
 	except Exception as e:
 		conn.rollback()
 		print("home", e)
@@ -377,63 +389,72 @@ def getGames():
 @app.route('/manageUser', methods=['GET','POST'])
 def manageUser():
 	#when admin is user then only open this page
-	if request.method == 'GET':
-		page_num = 1
+	if 'admin' in session:
+		if request.method == 'GET':
+			page_num = 1
+		else:
+			page_num = request.form.get('page_num').replace("'","&#39")
+		page_num = int(page_num)
+		if page_num <=0:
+			return "Bad page number"
+		try:
+			cur.execute("SELECT username, isbanned FROM users WHERE isadmin=false ORDER BY username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ")
+			rows = cur.fetchall()
+			userslist = []
+			for tup in rows:
+				userObj = {}
+				userObj['username'] = tup[0]
+				userObj['isbanned'] = str(tup[1]).lower()
+				userslist.append(userObj)
+			# conn.commit()
+			return render_template('manage_user.html',user="DEFAULT", userslist = userslist)
+		except Exception as e:
+			# conn.rollback()
+			print("manageUser",e)
+			return "Some error occured"
 	else:
-		page_num = request.form.get('page_num').replace("'","&#39")
-	page_num = int(page_num)
-	if page_num <=0:
-		return "Bad page number"
-	try:
-		cur.execute("SELECT username, isbanned FROM users WHERE isadmin=false ORDER BY username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY ")
-		rows = cur.fetchall()
-		userslist = []
-		for tup in rows:
-			userObj = {}
-			userObj['username'] = tup[0]
-			userObj['isbanned'] = str(tup[1]).lower()
-			userslist.append(userObj)
-		# conn.commit()
-		return render_template('manage_user.html',user="DEFAULT", userslist = userslist)
-	except Exception as e:
-		# conn.rollback()
-		print("manageUser",e)
-		return "Some error occured"
+		return "you don't have rights to perform this action"
 
 
 @app.route('/banUser', methods=['POST'])
 def banUser():
 	#only when the request is made by admin
-	if request.method == 'POST':
-		username = request.form.get('username').replace("'","&#39")
-		username = str(username)
-		try:
-			cur.execute("UPDATE users SET isbanned=true WHERE username='"+username+"'")
-			conn.commit()
-			return "successfully banned user "+ username
-		except Exception as e:
-			conn.rollback()
-			print("banuser",e)
-			return "Some error occured"
+	if 'admin' in session:
+		if request.method == 'POST':
+			username = request.form.get('username').replace("'","&#39")
+			username = str(username)
+			try:
+				cur.execute("UPDATE users SET isbanned=true WHERE username='"+username+"'")
+				conn.commit()
+				return "successfully banned user "+ username
+			except Exception as e:
+				conn.rollback()
+				print("banuser",e)
+				return "Some error occured"
+		else:
+			return "Bad request"
 	else:
-		return "Bad request"
+		return "you don't have rights to perform this action"
 
 @app.route('/unbanUser', methods=['POST'])
 def unbanUser():
 	#only when the request is made by admin
-	if request.method == 'POST':
-		username = request.form.get('username').replace("'","&#39")
-		username = str(username)
-		try:
-			cur.execute("UPDATE users SET isbanned=false WHERE username='"+username+"'")
-			conn.commit()
-			return "unbanned user "+ username
-		except Exception as e:
-			print("unbanuser", e)
-			conn.rollback()
-			return "Some error occured"
+	if 'admin' in session:
+		if request.method == 'POST':
+			username = request.form.get('username').replace("'","&#39")
+			username = str(username)
+			try:
+				cur.execute("UPDATE users SET isbanned=false WHERE username='"+username+"'")
+				conn.commit()
+				return "unbanned user "+ username
+			except Exception as e:
+				print("unbanuser", e)
+				conn.rollback()
+				return "Some error occured"
+		else:
+			return "Bad request"
 	else:
-		return "Bad request"
+		return "you don't have rights to perform this action"
 
 @app.route('/register')
 def register():
@@ -544,7 +565,7 @@ def toggle_fav():
 		else:
 			cur.execute("insert into favourites values ("+str(appid)+", '" + str(username) +"')")
 			conn.commit()
-			return str(appid) + " added to favourites"
+			return "game has been added to favourites"
 	except Exception as e:
 		print('Exception')
 		print(e)
@@ -655,71 +676,77 @@ def game_lib():
 @app.route('/addMoney', methods=['POST'])
 def addMoney():
 	#only admin can use this method
-	if request.method == 'POST':
-		username = request.form.get('username').replace("'","&#39")
-		amount = request.form.get('amount').replace("'","&#39")
-		username = str(username)
-		amount = round(float(amount),2)
-		try:
-			cur.execute("UPDATE wallets SET money = money+"+str(amount)+" WHERE username='"+username+"'")
-			conn.commit()
-			return "added money to wallet of user "+ username
-		except Exception as e:
-			print("addMoney",e)
-			conn.rollback()
-			return "Some error occured!"
+	if 'admin' in session:
+		if request.method == 'POST':
+			username = request.form.get('username').replace("'","&#39")
+			amount = request.form.get('amount').replace("'","&#39")
+			username = str(username)
+			amount = round(float(amount),2)
+			try:
+				cur.execute("UPDATE wallets SET money = money+"+str(amount)+" WHERE username='"+username+"'")
+				conn.commit()
+				return "added money to wallet of user "+ username
+			except Exception as e:
+				print("addMoney",e)
+				conn.rollback()
+				return "Some error occured!"
+		else:
+			return "Bad request"
 	else:
-		return "Bad request"
+		return "you don't have rights to perform this action"
 
 
 @app.route('/addGame', methods=['POST'])
 def addGame():
 	#only admin can call this function
-	if request.method == 'POST':
-		name = request.form.get('name').replace("'","&#39")
-		release_date = request.form.get('release_date')
-		description = request.form.get('description').replace("'","&#39")
-		developers = request.form.get('developers').replace("'","&#39")
-		publishers = request.form.get('publishers').replace("'","&#39")
-		platforms = request.form.get('platforms').replace("'","&#39")
-		required_age = request.form.get('required_age')
-		categories = request.form.get('categories').replace("'","&#39")
-		genres = request.form.get('genres').replace("'","&#39")
-		tags = request.form.get('tags').replace("'","&#39")
-		achievements = request.form.get('achievements')
-		price = request.form.get('price')
-		price = float(price)
-		price /=93.13 #to convert to gbp
-		try:
-			cur.execute("SELECT MAX(appid) from games");
-			rows = cur.fetchall()
-			appidmax = int(rows[0][0])
-			newappid = appidmax+1
-		except Exception as e:
-			print("addGame1",e)
-			conn.rollback()
-			return "Some error occured1!"
-		
-		try:
-			cur.execute(
-						'''
-						INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
-						VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
-						'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
-							genres=genres,tags=tags,achievements=achievements,price=str(price))
-						)
-			cur.execute('''
-						INSERT INTO games_description (appid, detailed_description, about_game, short_description)
-						VALUES ({newappid}, '{description}', '{description}', '{description}')
-						'''.format(newappid=newappid, description=description))
-			conn.commit()
-			return "added game "+name
-		except Exception as e:
-			print("addGame2",e)
-			conn.rollback()
-			return "Some error occured2!"
+	if 'admin' in session:
+		if request.method == 'POST':
+			name = request.form.get('name').replace("'","&#39")
+			release_date = request.form.get('release_date')
+			description = request.form.get('description').replace("'","&#39")
+			developers = request.form.get('developers').replace("'","&#39")
+			publishers = request.form.get('publishers').replace("'","&#39")
+			platforms = request.form.get('platforms').replace("'","&#39")
+			required_age = request.form.get('required_age')
+			categories = request.form.get('categories').replace("'","&#39")
+			genres = request.form.get('genres').replace("'","&#39")
+			tags = request.form.get('tags').replace("'","&#39")
+			achievements = request.form.get('achievements')
+			price = request.form.get('price')
+			price = float(price)
+			price /=93.13 #to convert to gbp
+			try:
+				cur.execute("SELECT MAX(appid) from games");
+				rows = cur.fetchall()
+				appidmax = int(rows[0][0])
+				newappid = appidmax+1
+			except Exception as e:
+				print("addGame1",e)
+				conn.rollback()
+				return "Some error occured1!"
+			
+			try:
+				cur.execute(
+							'''
+							INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
+							VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
+							'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
+								genres=genres,tags=tags,achievements=achievements,price=str(price))
+							)
+				cur.execute('''
+							INSERT INTO games_description (appid, detailed_description, about_game, short_description)
+							VALUES ({newappid}, '{description}', '{description}', '{description}')
+							'''.format(newappid=newappid, description=description))
+				conn.commit()
+				return "added game "+name
+			except Exception as e:
+				print("addGame2",e)
+				conn.rollback()
+				return "Some error occured2!"
+		else:
+			return "Bad request"
 	else:
-		return "Bad request"
+		return "you don't have rights to perform this action"
 
 
 # @app.route('/admin')
@@ -729,18 +756,21 @@ def addGame():
 @app.route('/deleteGame', methods=['POST'])
 def deleteGame():
 	#only admin can call this function
-	if request.method == 'POST':
-		appid = request.form.get('appid')
-		try:
-			cur.execute("DELETE FROM games where appid="+str(appid));
-			conn.commit()
-			return "successfully deleted!"
-		except Exception as e:
-			print("deleteGame",e)
-			conn.rollback()
-			return "Some error occured!"
+	if 'admin' in session:
+		if request.method == 'POST':
+			appid = request.form.get('appid')
+			try:
+				cur.execute("DELETE FROM games where appid="+str(appid));
+				conn.commit()
+				return "successfully deleted!"
+			except Exception as e:
+				print("deleteGame",e)
+				conn.rollback()
+				return "Some error occured!"
+		else:
+			return "Invalid request"
 	else:
-		return "Invalid request"
+		return "you don't have rights to perform this action"
 
 
 @app.route('/getMoneyOfUser', methods=['POST'])
@@ -791,3 +821,90 @@ def add_review():
 				return "some error occured"
 	else:
 		return "Invalid request"
+
+@app.route('/movies')
+def movies():
+	appid = request.args.get('appid').replace("'","&#39") ###
+	if appid == None:
+		return "No appid provided"
+	try:
+		cur.execute("SELECT movies FROM media_data WHERE appid="+str(appid))
+		rows = cur.fetchall()
+		res = []
+		conn.commit()
+		if len(rows)>0:
+			if not rows[0][0]:
+				return "there are no videos for this game"
+			for movobj in ast.literal_eval(rows[0][0]):
+				try:
+					D = {}
+					D['name'] = movobj['name']
+					D['thumbnail'] = movobj['thumbnail']
+					D['lqlink'] = movobj['webm']['480']
+					D['hqlink'] = movobj['webm']['max']
+					res.append(D)
+				except:
+					continue
+			return render_template('movies.html',user="DEFAULT",movies=res)
+		else:
+			return "ERROR"
+	except Exception as e:
+		print("movies",e)
+		conn.rollback()
+		return "Some error occured"
+
+
+def getRecommended():
+	#given a username, generate recommendation for that user
+	if 'user' in session:
+		username = session['user']
+	else:
+		return "Not logged in"
+
+	user_vec = np.zeros(len(TAGS_LIST))
+	users_favorited = set() #appid consisting of already users favorites
+	count = 0
+	#first generate tag vector of this user using his favorites and taking average of all the tags
+	cur.execute("select * from tags,favourites where username='"+username+"' AND tags.appid=favourites.appid")
+	rows = cur.fetchall()
+	for tup in rows:
+		appid = tup[0]
+		users_favorited.add(appid)
+		row_vec = np.array(tup[1:-3]) #to trim out some columns not in tags
+		row_vec = row_vec/np.sum(row_vec)
+		user_vec += row_vec
+		count += 1
+	user_vec = user_vec/count #to take average
+	# print(user_vec)
+	# print(len(user_vec))
+	# print(len(TAGS_LIST))
+	#go over the tags table and find the consine similarity corresponding to the appid in the tag table
+	recommended = []
+	for vec_tup in movie_vec_list:
+		similarity = 1 - spatial.distance.cosine(user_vec, vec_tup[1])
+		recommended.append((vec_tup[0],similarity))
+	recommended.sort(key=lambda x: x[1] ,reverse=True)
+	simValues = [x[1] for x in recommended if x[0] not in users_favorited][:10]
+	recommended = [x[0] for x in recommended if x[0] not in users_favorited][:10]
+	if(len(recommended)<10):
+		#very rare case
+		recommended.extend([10,10,10,10,10,10,10,10,10,10])
+		recommended = recommended[:10]
+
+	cur.execute('''
+				SELECT appid,name from games where appid={one} or appid={two} or appid={three} or appid={four} or appid={five}
+				or appid={six} or appid={seven} or appid={eight} or appid={nine} or appid={ten}
+				'''.format(one=recommended[0],two=recommended[1],three=recommended[2],four=recommended[3],five=recommended[4],
+					six=recommended[5], seven=recommended[6], eight=recommended[7], nine=recommended[8], ten=recommended[9],))
+	rows = cur.fetchall()
+	result = []
+	hashmap = {}
+	for tup in rows:
+		hashmap[tup[0]] = tup[1]
+	for i in range(len(recommended)):
+		D = {}
+		D["appid"] = recommended[i]
+		D["name"] = hashmap[recommended[i]]
+		D["similarity"] = simValues[i]
+		result.append(D)
+	return result

@@ -1,12 +1,135 @@
 {% extends "base.html" %}
 
 {% block content %}
+	{% if 'admin' in session %}
+		<style type="text/css">
+			.addGamePopup{
+			    background:rgba(0,0,0,.4);
+			    cursor:pointer;
+			    display:none;
+			    height:100%;
+			    position:fixed;
+			    text-align:center;
+			    top:0;
+			    width:100%;
+			    z-index:10000;
+			}
+			.addGamePopup .helper{
+			    display:inline-block;
+			    height:100%;
+			    vertical-align:middle;
+			}
+			.addGamePopup > div {
+			    background-color: #fff;
+			    box-shadow: 10px 10px 60px #555;
+			    display: inline-block;
+			    height: auto;
+			    max-width: 551px;
+			    min-height: 100px;
+			    vertical-align: middle;
+			    width: 60%;
+			    position: relative;
+			    border-radius: 8px;
+			    padding: 15px 5%;
+			}
+			.popupCloseButton {
+			    background-color: #fff;
+			    border: 3px solid #999;
+			    border-radius: 50px;
+			    cursor: pointer;
+			    display: inline-block;
+			    font-family: arial;
+			    font-weight: bold;
+			    position: absolute;
+			    top: -20px;
+			    right: -20px;
+			    font-size: 25px;
+			    line-height: 30px;
+			    width: 30px;
+			    height: 30px;
+			    text-align: center;
+			}
+			.popupCloseButton:hover {
+			    background-color: #ccc;
+			}
+			.trigger_popup_fricc {
+			    cursor: pointer;
+			    font-size: 20px;
+			    margin: 20px;
+			    display: inline-block;
+			    font-weight: bold;
+			}
 
+			/* Popup box BEGIN */
+		</style>
+
+
+		<div class="addGamePopup">
+		    <span class="helper"></span>
+		    <div>
+		        <div class="popupCloseButton" onclick="close_popup()">&times;</div>
+		        <div id="popupContent">
+		        	Game name: <input type="text" id="name" name="name"><br>
+		        	Description: <textarea id="description" rows="4" cols="20">  </textarea><br>
+	 				Release date: <input type="date" id="release_date" name="release_date"> <br>
+		        	Developers: <input type="text" id="developers" name="developers" placeholder=" ; seperated"><br>
+		        	Publishers: <input type="text" id="publishers" name="publishers" placeholder=" ; seperated"><br>
+		        	Platforms: <input type="text" id="platforms" name="platforms" placeholder=" ; seperated"><br>
+		        	Required Age: <input type="number" id="required_age" name="required_age" placeholder=" Integer"><br>
+		        	Categories:<input type="text" id="categories" name="categories" placeholder=" ; seperated"><br>
+		        	Genres: <input type="text" id="genres" name="genres" placeholder=" ; seperated"><br>
+		        	Tags: <input type="text" id="tags" name="tags" placeholder=" ; seperated"><br>
+		        	Achievements: <input type="number" id="achievements" name="achievements" placeholder=" Integer"><br>
+		        	Price: <input type="number" id="price" name="price" placeholder=" in INR"><br>
+		        	<button onclick="addGameRequest()"> Add game </button>
+		        </div>
+		    </div>
+		</div>
+
+		<script type="text/javascript">
+			function close_popup(){
+				$('.addGamePopup').hide();
+			}
+			function open_addGamePopup(){
+				$('.addGamePopup').show();
+			}
+			
+			function addGameRequest(){
+				$.post("/addGame",
+				 {
+				 	name: $("#name").val(),
+				 	release_date: $("#release_date").val(),
+				 	description: $("#description").val(),
+				 	developers: $("#developers").val(),
+				 	publishers: $("#publishers").val(),
+				 	platforms: $("#platforms").val(),
+				 	required_age: $("#required_age").val(),
+				 	categories: $("#categories").val(),
+				 	genres: $("#genres").val(),
+				 	tags: $("#tags").val(),
+				 	achievements: $("#achievements").val(),
+				 	price: $("#price").val()
+				 },
+				 function(data, status){
+				 	if(status=='success'){
+				 		if(confirm(data)){
+				 		    window.location.reload();  
+				 		}
+				 	}
+				 });
+			}
+		</script>
+	<br>
+	<br>
+	{% endif %}
 
 <div class = "container">
     <h3>Welcome back <strong>{{username}}</strong>.</h3>
+    {% if 'admin' in session %}
+        <button type="button" class="btn btn-primary" onclick="open_addGamePopup()">Add game</button>
+        <a href="/manageUser" class="btn btn-primary"> Manage Users </a><br><br>
+    {% endif %}
     <a href="/game_lib" class="btn btn-success">Bought Games</a>
-    </br> </br>
     <a href="/get_fav" class="btn btn-info">Favourite Games</a>
     </br> </br>
     <h4 id = "wallet_text">Wallet: </h4>
