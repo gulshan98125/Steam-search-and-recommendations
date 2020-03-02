@@ -10,7 +10,9 @@ import psycopg2
 import time
 from datetime import datetime
 
-conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
+#conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
+conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "proj_temp")
+#conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
 cur = conn.cursor()
 
 @app.route('/home')
@@ -120,15 +122,25 @@ def game_details():
 			windows_requirements = None
 			mac_requirements = None
 			linux_requirements = None
-
+		
+		cur.execute('''
+		SELECT column_name
+		FROM information_schema.columns
+		where table_name   = 'tags'
+			;
+		''')
+		tags_list = cur.fetchall()
+	#	print(tags_list)
 		cur.execute("SELECT * FROM tags WHERE appid="+str(appid));
 		rows = cur.fetchall()
 		tags = []
 		if len(rows)>0:
+			arr = [(rows[0][i], tags_list[i][0]) for i in range(1, len(tags_list))]
+			arr.sort(reverse = True)
 			tup = rows[0]
-			for i in range(0,len(TAGS_LIST)):
-				if int(tup[i+1])>0:
-					tags.append(TAGS_LIST[i])
+			for i in range(0,len(tags_list)-1):
+				if int(arr[i][0])>0:
+					tags.append(arr[i][1])
 
 		cur.execute("SELECT * FROM games WHERE appid="+str(appid))
 		rows = cur.fetchall()
