@@ -31,6 +31,9 @@
 		  <th>Price</th>
 		  <th>positive ratings</th>
 		  <th>negative ratings</th>
+		  {% if 'admin' in session %}
+		  <th> Delete game </th>
+		  {% endif %}
 		</tr>
 	</table>
 	<div id="table" style="width:100%; max-height: 380px; overflow-y: scroll;">
@@ -72,6 +75,9 @@
 				 			s += "<td>"+obj[i]['price']+"</td>"
 				 			s += "<td>"+obj[i]['positive_ratings']+"</td>"
 				 			s += "<td>"+obj[i]['negative_ratings']+"</td>"
+				 			{% if 'admin' in session %}
+				 				s += "<td><button class=\"btn btn-danger\" onclick=\"deleteGame("+obj[i]['appid']+")\"> Delete </button></td>"
+				 			{% endif %}
 				 			s += "</tr>"
 				 			newtable+=s;
 				 		}
@@ -81,5 +87,23 @@
 				 	}
 				 });
    		}
+
+   		{% if 'admin' in session %}
+			function deleteGame(appid){
+				console.log("delete",appid);
+				var result = confirm("are you sure you want to delete this game?");
+				if(result){
+					$.post("/deleteGame",
+					 {
+					 	appid: appid
+					 },
+					 function(data, status){
+					 	if(confirm(data)){
+					 	    window.location.reload();  
+					 	}
+					 });
+				}
+			}
+		{% endif %}
    	</script>
 {% endblock %}

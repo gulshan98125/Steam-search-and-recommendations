@@ -255,7 +255,7 @@ def screenshots():
 				res.append(D)
 			return render_template('screenshots.html',user="DEFAULT",screenshots=res)
 		else:
-			return "ERROR"
+			return "No screenshots found"
 	except Exception as e:
 		print("screenshots",e)
 		conn.rollback()
@@ -701,11 +701,12 @@ def addGame():
 			required_age = request.form.get('required_age')
 			categories = request.form.get('categories').replace("'","&#39")
 			genres = request.form.get('genres').replace("'","&#39")
-			tags = request.form.get('tags').replace("'","&#39")
+			tags = request.form.getlist('tags[]')
 			achievements = request.form.get('achievements')
 			price = request.form.get('price')
 			price = float(price)
 			price /=93.13 #to convert to gbp
+			price = round(price,2)
 			try:
 				cur.execute("SELECT MAX(appid) from games");
 				rows = cur.fetchall()
@@ -715,19 +716,45 @@ def addGame():
 				print("addGame1",e)
 				conn.rollback()
 				return "Some error occured1!"
-			
+
+			tags_set = set(tags)
+			tags_temp = []
+			for tg in TAGS_LIST:
+				if tg in tags_set:
+					tags_temp.append('1')
+				else:
+					tags_temp.append('0')
 			try:
+
 				cur.execute(
-							'''
-							INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
-							VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
-							'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
-								genres=genres,tags=tags,achievements=achievements,price=str(price))
-							)
-				cur.execute('''
-							INSERT INTO games_description (appid, detailed_description, about_game, short_description)
-							VALUES ({newappid}, '{description}', '{description}', '{description}')
-							'''.format(newappid=newappid, description=description))
+					'''
+					BEGIN TRANSACTION;
+					
+					INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
+									VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price});
+
+				 	INSERT INTO tags values ({newappid},{tagsString});
+
+				 	INSERT INTO games_description (appid, detailed_description, about_game, short_description)
+							VALUES ({newappid}, '{description}', '{description}', '{description}');
+
+					COMMIT TRANSACTION;
+					'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
+						genres=genres,tags=";".join(tags),achievements=achievements,price=str(price), tagsString= ",".join(tags_temp),
+						description=description)
+					)
+
+				# cur.execute(
+				# 			'''
+				# 			INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
+				# 			VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
+				# 			'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
+				# 				genres=genres,tags=tags,achievements=achievements,price=str(price))
+				# 			)
+				# cur.execute('''
+				# 			INSERT INTO games_description (appid, detailed_description, about_game, short_description)
+				# 			VALUES ({newappid}, '{description}', '{description}', '{description}')
+				# 			'''.format(newappid=newappid, description=description))
 				conn.commit()
 				return "added game "+name
 			except Exception as e:
@@ -838,7 +865,7 @@ def movies():
 					continue
 			return render_template('movies.html',user="DEFAULT",movies=res)
 		else:
-			return "ERROR"
+			return "there are no videos for this game"
 	except Exception as e:
 		print("movies",e)
 		conn.rollback()
@@ -862,7 +889,7 @@ def getRecommended():
 		appid = tup[0]
 		users_favorited.add(appid)
 		row_vec = np.array(tup[1:-3]) #to trim out some columns not in tags
-		row_vec = row_vec/np.sum(row_vec)
+		row_vec = row_vec/np.max(row_vec)
 		user_vec += row_vec
 		count += 1
 	user_vec = user_vec/count #to take average
@@ -882,11 +909,14 @@ def getRecommended():
 		recommended.extend([10,10,10,10,10,10,10,10,10,10])
 		recommended = recommended[:10]
 
-	cur.execute('''
-				SELECT appid,name from games where appid={one} or appid={two} or appid={three} or appid={four} or appid={five}
-				or appid={six} or appid={seven} or appid={eight} or appid={nine} or appid={ten}
-				'''.format(one=recommended[0],two=recommended[1],three=recommended[2],four=recommended[3],five=recommended[4],
-					six=recommended[5], seven=recommended[6], eight=recommended[7], nine=recommended[8], ten=recommended[9],))
+	try:
+		cur.execute('''
+					SELECT appid,name from games where appid={one} or appid={two} or appid={three} or appid={four} or appid={five}
+					or appid={six} or appid={seven} or appid={eight} or appid={nine} or appid={ten}
+					'''.format(one=recommended[0],two=recommended[1],three=recommended[2],four=recommended[3],five=recommended[4],
+						six=recommended[5], seven=recommended[6], eight=recommended[7], nine=recommended[8], ten=recommended[9],))
+	except Exception as e:
+		print("getRecommended",e)
 	rows = cur.fetchall()
 	result = []
 	hashmap = {}
@@ -942,18 +972,26 @@ def advancedSearchGames():
 
 		if price_greaterthan_or_equal != '':
 			query += " AND (price::float) >= "+ str(round(float(price_greaterthan_or_equal)/93.13, 2))
-		cur.execute(query)
-		rows = cur.fetchall()
-		games = []
-		for tup in rows:
-			D = {}
-			D["appid"] = tup[0]
-			D["name"] = tup[1]
-			D["release_date"] = tup[2]
-			D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
-			D["positive_ratings"] = tup[4]
-			D["negative_ratings"] = tup[5]
-			games.append(D)
-		return json.dumps(games)
+
+		try:
+			cur.execute(query)
+			rows = cur.fetchall()
+			games = []
+			for tup in rows:
+				D = {}
+				D["appid"] = tup[0]
+				D["name"] = tup[1]
+				D["release_date"] = tup[2]
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
+				D["positive_ratings"] = tup[4]
+				D["negative_ratings"] = tup[5]
+				games.append(D)
+			conn.commit()
+			return json.dumps(games)
+		except Exception as e:
+			conn.rollback()
+			print("advanced_search",e)
+			return "Some error occured"
+		
 	else:
 		return "Invalid request"
