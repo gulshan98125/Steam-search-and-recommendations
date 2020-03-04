@@ -125,6 +125,7 @@
 
 <div class = "container">
     <h3>Welcome back <strong>{{username}}</strong>.</h3>
+    
     {% if 'admin' in session %}
         <button type="button" class="btn btn-primary" onclick="open_addGamePopup()">Add game</button>
         <a href="/manageUser" class="btn btn-primary"> Manage Users </a><br><br>

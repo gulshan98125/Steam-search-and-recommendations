@@ -15,14 +15,17 @@ from datetime import datetime
 conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
 cur = conn.cursor()
 
-cur.execute("select * from tags")
-full_tags_table = cur.fetchall()
 movie_vec_list = []
-for tup in full_tags_table:
-	appid = tup[0]
-	movie_vec = np.array(tup[1:])
-	movie_vec = movie_vec / np.sum(movie_vec)
-	movie_vec_list.append((appid,movie_vec))
+
+@app.before_first_request
+def function_to_run_only_once():
+	cur.execute("select * from tags")
+	full_tags_table = cur.fetchall()
+	for tup in full_tags_table:
+		appid = tup[0]
+		movie_vec = np.array(tup[1:])
+		movie_vec = movie_vec / np.sum(movie_vec)
+		movie_vec_list.append((appid,movie_vec))
 
 @app.route('/home')
 @app.route('/')
@@ -896,3 +899,61 @@ def getRecommended():
 		D["similarity"] = simValues[i]
 		result.append(D)
 	return result
+
+@app.route('/advanced_search')
+def advanced_search():
+	return render_template('advanced_search.html',user="DEFAULT")
+
+@app.route('/advancedSearchGames',methods=['POST'])
+def advancedSearchGames():
+	if request.method == 'POST':
+		name = request.form.get('name').replace("'","&#39").lower() ###
+		publisher = request.form.get('publisher').replace("'","&#39").lower() ###
+		genre = request.form.get('genre').replace("'","&#39").lower() ###
+		platform = request.form.get('platform').replace("'","&#39").lower() ###
+		price_lessthan_or_equal = request.form.get('price_lessthan_or_equal').replace("'","&#39").lower() ###
+		price_greaterthan_or_equal = request.form.get('price_greaterthan_or_equal').replace("'","&#39").lower() ###
+		selected_tags = request.form.getlist('selected_tags[]')
+		# query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY release_date ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+
+		#first select appids from tags where row has non zero for all the tags in the selected_tags
+		query = ""
+		if len(selected_tags)>0:
+			query = "SELECT games.appid, games.name, games.release_date, games.price, games.positive_ratings, games.negative_ratings FROM games, tags WHERE games.appid=tags.appid "
+			for tag in selected_tags:
+				query += "AND \""+tag+"\" <> 0 "
+		else:
+			query = "SELECT games.appid, games.name, games.release_date, games.price, games.positive_ratings, games.negative_ratings from games WHERE appid IS NOT NULL"
+		
+		if name != '':
+			query += " AND LOWER(name) LIKE '%"+ name +"%'"
+
+		if publisher != '':
+			query += " AND LOWER(publisher) LIKE '%"+ publisher +"%'"
+
+		if genre != '':
+			query += " AND LOWER(genres) LIKE '%"+ genre +"%'"
+
+		if platform != '':
+			query += " AND LOWER(platforms) LIKE '%"+ platform +"%'"
+
+		if price_lessthan_or_equal != '':
+			query += " AND (price::float) <= "+ str(round(float(price_lessthan_or_equal)/93.13, 2))
+
+		if price_greaterthan_or_equal != '':
+			query += " AND (price::float) >= "+ str(round(float(price_greaterthan_or_equal)/93.13, 2))
+		cur.execute(query)
+		rows = cur.fetchall()
+		games = []
+		for tup in rows:
+			D = {}
+			D["appid"] = tup[0]
+			D["name"] = tup[1]
+			D["release_date"] = tup[2]
+			D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
+			D["positive_ratings"] = tup[4]
+			D["negative_ratings"] = tup[5]
+			games.append(D)
+		return json.dumps(games)
+	else:
+		return "Invalid request"
