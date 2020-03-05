@@ -139,7 +139,7 @@
 
 					{% if vars.price and vars.price|float <= vars.user_money|float %}
 					<p>Money in wallet after purchase: <strong>{{'%0.2f'|format(vars.user_money|float - vars.price|float)}}</strong> </p>
-					<button type="button" onclick="update_wallet_and_buy()" class="btn btn-primary">
+					<button type="button" onclick="game_transaction()" class="btn btn-primary">
 						Buy Game
 					</button>
 				  	{% endif %}
@@ -160,7 +160,7 @@
 						  <label class="form-check-label" for="exampleCheck1">Save card</label> 
 						</div>
 					-->
-						<button type="button" onclick="update_wallet_and_buy()" class="btn btn-primary">
+						<button type="button" onclick="game_transaction()" class="btn btn-primary">
 							Add Rs. {{vars.price|float - vars.user_money|float}} to the wallet and buy
 						</button>
 					  </form>
@@ -272,6 +272,19 @@
 		appid = {{vars.appid}}
 		price = {{vars.price|float}}
 		$.get( "/add_game?appid=" + appid.toString() + "&price="+price, function(data) {
+				alert(data)
+				location.reload()
+			});
+
+	}
+
+	function game_transaction(){
+		money = {{vars.user_money}}
+		price = {{vars.price}}
+		amt = -Math.min(money, price)
+		appid = {{vars.appid}}
+		price = {{vars.price|float}}
+		$.get( "/game_transaction?appid=" + appid.toString() + "&price="+price + "&amount=" + amt, function(data) {
 				alert(data)
 				location.reload()
 			});

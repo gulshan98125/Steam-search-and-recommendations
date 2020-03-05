@@ -13,8 +13,8 @@ import time
 from datetime import datetime
 
 #conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
-#conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "steam_project")
-conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
+conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "steam_project")
+#conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
 cur = conn.cursor()
 
 movie_vec_list = []
@@ -542,6 +542,10 @@ def regUser():
 		cur.execute("INSERT INTO wallets (username) VALUES ('" + str(usr_id)+"')")
 		conn.commit()
 		session['user'] = usr_id
+		user = {}
+		user['username'] = session['user']
+		user['favs'] = []
+		session['user_obj'] = user
 		return redirect(url_for('home'))
 	except Exception as e:
 		print('Exception')
@@ -566,6 +570,9 @@ def login():
 			return redirect(url_for('login'))
 		if row[0][1]!=pass_hash:
 			flash('Incorrect password.')
+			return redirect(url_for('login'))
+		if row[0][3]!=False:
+			flash('You have been banned!')
 			return redirect(url_for('login'))
 
 		try:
@@ -672,6 +679,32 @@ def add_money():
 		conn.commit()
 		session['user_obj']['money'] = amount
 		return "Success. " + str(amount-money) + " has been added to your wallet."
+	except Exception as e:
+		print('Exception')
+		print(e)
+		return str(e)
+
+@app.route('/game_transaction')
+def game_transaction():
+	username = session['user']
+	appid = request.args.get('appid').replace("'","&#39")
+	ts = str(psycopg2.TimestampFromTicks(time.time()))
+	price = request.args.get('price').replace("'","&#39")
+	try:
+		amount = float(request.args.get('amount').replace("'","&#39"))
+		print(amount)
+		cur.execute("SELECT money FROM wallets WHERE username = '" + str(username) + "'")
+		row = cur.fetchall()
+		money = row[0][0]
+		amount+=money
+		cur.execute('''
+		BEGIN TRANSACTION;
+		update wallets set money = {amt} where username = '{usr}';
+		insert into transactions values ({appid}, '{usr}', {price}, {ts});
+		END TRANSACTION;
+		'''.format(amt = amount, usr = username, appid = appid, price = price, ts = ts))
+		conn.commit()
+		return "Success. " + str(appid) + " has been added to your library."
 	except Exception as e:
 		print('Exception')
 		print(e)
