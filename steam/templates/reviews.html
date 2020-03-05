@@ -5,54 +5,135 @@
 	  border: 1px solid black;
 	  border-collapse: collapse;
 	  background-color: white;
+	  table-layout: fixed;
 	}
-	th, td {
+	th.uname, th.ff,th.hrs, th.dte {
+	  width: 10%
+	}
+	td.uname, td.ff,td.hrs {
+	  width: 10%
+	}
+	td.dte{
+		width: 9%
+	}
+	th.rev {
+	  width: 60%; /* Not necessary, since only 70% width remains */
+	}
+	td.rev {
+	  width: 61%; /* Not necessary, since only 70% width remains */
+	}
+	/*th, td {
 	  padding: 5px;
 	  text-align: left;    
-	}
+	}*/
+	.arrow {
+				width: 20;
+				height: 20;
+				cursor: pointer;
+			}
 	</style>
 	<button onclick="prev()">previous page</button>
 	<button onclick="next()">next page</button>
 	<table style="width:100%">
 		  <tr>
-		    <th>User Name</th>
-		    <th>Review</th>
-		    <th>Found funny</th>
-		    <th>Hours</th>
-		    <th>Date</th>
+		    <th class="uname">User Name</th>
+		    <th class="rev">Review</th>
+		    <th class="ff">Found funny <img id="found_funny" src="/static/arrowdown.png" class="arrow" onclick="toggle(this)"></th>
+		    <th class="hrs">Hours <img id="hours" src="/static/arrowup.png" class="arrow" onclick="toggle(this)"></th>
+		    <th class="dte">Date <img id="date" src="/static/arrowup.png" class="arrow" onclick="toggle(this)"></th>
 		  </tr>
-	{% if reviews %}
-		  {% for revObj in reviews %}
-		  	<tr>
-		  	  <td>{{revObj.username}}</td>
-		  	  <td>{{revObj.review}}</td>
-		  	  <td>{{revObj.found_funny}}</td>
-		  	  <td>{{revObj.hours}}</td>
-		  	  <td>{{revObj.date}}</td>
-		  	</tr>
-		  {% endfor %}
-	{% endif %}
 	</table>
+	<div id="table" style="overflow-y: scroll; max-height: 80%">
+		<table style="width:100%">
+			{% if reviews %}
+			  	{% for revObj in reviews %}
+				  	<tr>
+				  	  <td class="uname">{{revObj.username}}</td>
+				  	  <td class="rev">{{revObj.review}}</td>
+				  	  <td class="ff">{{revObj.found_funny}}</td>
+				  	  <td class="hrs">{{revObj.hours}}</td>
+				  	  <td class="dte">{{revObj.date}}</td>
+				  	</tr>
+			  	{% endfor %}
+			{% endif %}
+		</table>
+	</div>
 
 	<script type="text/javascript">
-		function getUrlVars() {
-		    var vars = {};
-		    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
-		        vars[key] = value;
-		    });
-		    return vars;
+		var appid = {{appid}}
+		var page_num = 1;
+		var up= "/static/arrowup.png";
+		var down= "/static/arrowdown.png";
+		var clicked_arrow_id = 'positive_ratings'; //default
+		var clicked_arrow_dir = 'desc'; //default
+		function toggle(elem){
+			clicked_arrow_id = elem.id;
+			if(elem.src.includes(down)){
+				elem.src = up;
+				clicked_arrow_dir = 'asc';
+			}
+			else {
+				elem.src = down;
+				clicked_arrow_dir = 'desc';
+			}
+
+			$.post("/reviews_POST",
+			 {
+			 	appid: appid,
+			   	page_num: page_num,
+			   	method: clicked_arrow_id+'_'+clicked_arrow_dir
+			 },
+			 function(data, status){
+			 	reponseHandler(data,status)
+			 });
 		}
-		var pageNum = getUrlVars()["page_num"];
+
+
+		function reponseHandler(data, status){
+			if(status==='success'){
+				var obj = JSON.parse(data);
+				var newtable = "<table style=\"width:100%\">";
+				for(let i=0;i<obj.length-1;i++){
+					let s = "<tr>";
+					s += "<td class=\"uname\">"+obj[i]['username']+"</a>"+"</td>"
+					s += "<td class=\"rev\">"+obj[i]['review']+"</td>"
+					s += "<td class=\"ff\">"+obj[i]['found_funny']+"</td>"
+					s += "<td class=\"hrs\">"+obj[i]['hours']+"</td>"
+					s += "<td class=\"dte\">"+obj[i]['date']+"</td>"
+					s += "</tr>"
+					newtable+=s;
+				}
+				document.getElementById("table").innerHTML = newtable;
+			}
+		}
 		function prev(){
-			if(pageNum>1){
-				pageNum--;
-				location.href = "/reviews?appid={{appid}}&page_num="+pageNum;
+			if(page_num>1){
+				page_num--;
+				// location.href = "/reviews?appid={{appid}}&page_num="+pageNum;
+				$.post("/reviews_POST",
+				 {
+				 	appid: appid,
+				   	page_num: page_num,
+				   	method: clicked_arrow_id+'_'+clicked_arrow_dir
+				 },
+				 function(data, status){
+				 	reponseHandler(data,status)
+				 });
 			}
 		}
 
 		function next(){
-			pageNum++;
-			location.href = "/reviews?appid={{appid}}&page_num="+pageNum;
+			page_num++;
+			// location.href = "/reviews?appid={{appid}}&page_num="+pageNum;
+			$.post("/reviews_POST",
+			 {
+			 	appid: appid,
+			   	page_num: page_num,
+			   	method: clicked_arrow_id+'_'+clicked_arrow_dir
+			 },
+			 function(data, status){
+			 	reponseHandler(data,status)
+			 });
 		}
 	</script>
 {% endblock %}

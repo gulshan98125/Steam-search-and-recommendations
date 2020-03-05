@@ -236,6 +236,56 @@ def reviews():
 		conn.rollback()
 		return "Some error occured"
 
+@app.route('/reviews_POST', methods=['POST'])
+def reviews_POST():
+	appid = request.form.get('appid').replace("'","&#39") ###
+	page_num = request.form.get('page_num').replace("'","&#39") ###
+	method = request.form.get('method').replace("'","&#39")
+	if appid == None:
+		return "No appid provided"
+	if page_num == None:
+		return "No offset provided"
+
+	if method == 'found_funny_asc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY found_funny ASC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'found_funny_desc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY found_funny DESC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'hours_asc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY hours ASC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'hours_desc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY hours DESC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'date_asc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY date ASC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'date_desc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY date DESC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	else:
+		#default by found funny desc
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY found_funny DESC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+
+	try:
+		cur.execute(query)
+		#return a list of dictionary
+		rev = []
+		rows = cur.fetchall()
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["username"] = tup[0]
+				D["review"] = tup[1]
+				D["found_funny"] = tup[2]
+				D["hours"] = tup[3]
+				D["date"] = str(tup[4])
+				rev.append(D)
+		conn.commit()
+		return json.dumps(rev)
+	except Exception as e:
+		print("reviews",e)
+		conn.rollback()
+		return "Some error occured"
+
+
+
+
 @app.route('/screenshots')
 def screenshots():
 	appid = request.args.get('appid').replace("'","&#39") ###
