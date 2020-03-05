@@ -13,8 +13,8 @@ import time
 from datetime import datetime
 
 #conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
-conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "steam_project")
-#conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
+#conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "steam_project")
+conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
 cur = conn.cursor()
 
 movie_vec_list = []
@@ -1024,6 +1024,20 @@ def getRecommended():
 		D["similarity"] = simValues[i]
 		result.append(D)
 	return result
+
+@app.route('/refresh_views')
+def refresh_views():
+	try:
+		cur.execute('''
+		REFRESH MATERIALIZED VIEW mat_top10_fav;
+		REFRESH MATERIALIZED VIEW mat_top10_bought;
+		''')
+		conn.commit()
+		return 'Views refreshed'
+	except Exception as e:
+		conn.rollback()
+		print("getMoneyOfUser",e)
+		return "unable to fetch money"
 
 @app.route('/advanced_search')
 def advanced_search():

@@ -85,7 +85,7 @@
 	        	    </select><br>
 		        	Achievements: <input type="number" id="achievements" name="achievements" placeholder=" Integer"><br>
 		        	Price: <input type="number" id="price" name="price" placeholder=" in INR"><br>
-		        	<button onclick="addGameRequest()"> Add game </button>
+					<button onclick="addGameRequest()"> Add game </button>
 		        </div>
 		    </div>
 		</div>
@@ -132,7 +132,9 @@
     
     {% if 'admin' in session %}
         <button type="button" class="btn btn-primary" onclick="open_addGamePopup()">Add game</button>
-        <a href="/manageUser" class="btn btn-primary"> Manage Users </a><br><br>
+		<a href="/manageUser" class="btn btn-primary"> Manage Users </a>
+		<button class="btn btn-primary" onclick="refresh_views()"> Refresh Views </button>
+		<br><br> 
     {% endif %}
     <a href="/game_lib" class="btn btn-success">Bought Games</a>
     <a href="/get_fav" class="btn btn-info">Favourite Games</a>
@@ -153,6 +155,11 @@
     $.get( "/get_money", function( data ) {
                 $("#wallet_text").html("Wallet: Rs " + data)
 			});
+	function refresh_views(){
+		$.get( "/refresh_views", function( data ) {
+                alert(data)
+			});
+	}
 </script>
 
 {% endblock %}
