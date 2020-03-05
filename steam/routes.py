@@ -17,14 +17,17 @@ from datetime import datetime
 conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
 cur = conn.cursor()
 
-cur.execute("select * from tags")
-full_tags_table = cur.fetchall()
 movie_vec_list = []
-for tup in full_tags_table:
-	appid = tup[0]
-	movie_vec = np.array(tup[1:])
-	movie_vec = movie_vec / np.sum(movie_vec)
-	movie_vec_list.append((appid,movie_vec))
+
+@app.before_first_request
+def function_to_run_only_once():
+	cur.execute("select * from tags")
+	full_tags_table = cur.fetchall()
+	for tup in full_tags_table:
+		appid = tup[0]
+		movie_vec = np.array(tup[1:])
+		movie_vec = movie_vec / np.sum(movie_vec)
+		movie_vec_list.append((appid,movie_vec))
 
 @app.route('/home')
 @app.route('/')
@@ -245,6 +248,56 @@ def reviews():
 		conn.rollback()
 		return "Some error occured"
 
+@app.route('/reviews_POST', methods=['POST'])
+def reviews_POST():
+	appid = request.form.get('appid').replace("'","&#39") ###
+	page_num = request.form.get('page_num').replace("'","&#39") ###
+	method = request.form.get('method').replace("'","&#39")
+	if appid == None:
+		return "No appid provided"
+	if page_num == None:
+		return "No offset provided"
+
+	if method == 'found_funny_asc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY found_funny ASC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'found_funny_desc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY found_funny DESC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'hours_asc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY hours ASC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'hours_desc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY hours DESC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'date_asc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY date ASC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	elif method == 'date_desc':
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY date DESC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+	else:
+		#default by found funny desc
+		query = "SELECT username,review,found_funny,hours,date FROM reviews WHERE appid="+str(appid)+" ORDER BY found_funny DESC, username ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+
+	try:
+		cur.execute(query)
+		#return a list of dictionary
+		rev = []
+		rows = cur.fetchall()
+		if len(rows)>0:
+			for tup in rows:
+				D = {}
+				D["username"] = tup[0]
+				D["review"] = tup[1]
+				D["found_funny"] = tup[2]
+				D["hours"] = tup[3]
+				D["date"] = str(tup[4])
+				rev.append(D)
+		conn.commit()
+		return json.dumps(rev)
+	except Exception as e:
+		print("reviews",e)
+		conn.rollback()
+		return "Some error occured"
+
+
+
+
 @app.route('/screenshots')
 def screenshots():
 	appid = request.args.get('appid').replace("'","&#39") ###
@@ -264,7 +317,7 @@ def screenshots():
 				res.append(D)
 			return render_template('screenshots.html',user="DEFAULT",screenshots=res)
 		else:
-			return "ERROR"
+			return "No screenshots found"
 	except Exception as e:
 		print("screenshots",e)
 		conn.rollback()
@@ -710,11 +763,12 @@ def addGame():
 			required_age = request.form.get('required_age')
 			categories = request.form.get('categories').replace("'","&#39")
 			genres = request.form.get('genres').replace("'","&#39")
-			tags = request.form.get('tags').replace("'","&#39")
+			tags = request.form.getlist('tags[]')
 			achievements = request.form.get('achievements')
 			price = request.form.get('price')
 			price = float(price)
 			price /=93.13 #to convert to gbp
+			price = round(price,2)
 			try:
 				cur.execute("SELECT MAX(appid) from games");
 				rows = cur.fetchall()
@@ -724,19 +778,45 @@ def addGame():
 				print("addGame1",e)
 				conn.rollback()
 				return "Some error occured1!"
-			
+
+			tags_set = set(tags)
+			tags_temp = []
+			for tg in TAGS_LIST:
+				if tg in tags_set:
+					tags_temp.append('1')
+				else:
+					tags_temp.append('0')
 			try:
+
 				cur.execute(
-							'''
-							INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
-							VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
-							'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
-								genres=genres,tags=tags,achievements=achievements,price=str(price))
-							)
-				cur.execute('''
-							INSERT INTO games_description (appid, detailed_description, about_game, short_description)
-							VALUES ({newappid}, '{description}', '{description}', '{description}')
-							'''.format(newappid=newappid, description=description))
+					'''
+					BEGIN TRANSACTION;
+					
+					INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
+									VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price});
+
+				 	INSERT INTO tags values ({newappid},{tagsString});
+
+				 	INSERT INTO games_description (appid, detailed_description, about_game, short_description)
+							VALUES ({newappid}, '{description}', '{description}', '{description}');
+
+					COMMIT TRANSACTION;
+					'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
+						genres=genres,tags=";".join(tags),achievements=achievements,price=str(price), tagsString= ",".join(tags_temp),
+						description=description)
+					)
+
+				# cur.execute(
+				# 			'''
+				# 			INSERT INTO games (appid, name,release_date,is_english,developer,publisher,platforms,required_age,categories,genres,steamspy_tags,achievements,positive_ratings,negative_ratings,average_playtime,median_playtime,owners_range,price)
+				# 			VALUES ({newappid},'{name}','{release_date}',1,'{developers}','{publishers}','{platforms}',{required_age},'{categories}','{genres}','{tags}',{achievements},0,0,0,0,'0-20000',{price})
+				# 			'''.format(newappid=newappid, name=name, release_date=release_date, developers=developers,publishers=publishers,platforms=platforms,required_age=required_age,categories=categories,
+				# 				genres=genres,tags=tags,achievements=achievements,price=str(price))
+				# 			)
+				# cur.execute('''
+				# 			INSERT INTO games_description (appid, detailed_description, about_game, short_description)
+				# 			VALUES ({newappid}, '{description}', '{description}', '{description}')
+				# 			'''.format(newappid=newappid, description=description))
 				conn.commit()
 				return "added game "+name
 			except Exception as e:
@@ -847,7 +927,7 @@ def movies():
 					continue
 			return render_template('movies.html',user="DEFAULT",movies=res)
 		else:
-			return "ERROR"
+			return "there are no videos for this game"
 	except Exception as e:
 		print("movies",e)
 		conn.rollback()
@@ -871,7 +951,7 @@ def getRecommended():
 		appid = tup[0]
 		users_favorited.add(appid)
 		row_vec = np.array(tup[1:-3]) #to trim out some columns not in tags
-		row_vec = row_vec/np.sum(row_vec)
+		row_vec = row_vec/np.max(row_vec)
 		user_vec += row_vec
 		count += 1
 	user_vec = user_vec/count #to take average
@@ -891,11 +971,14 @@ def getRecommended():
 		recommended.extend([10,10,10,10,10,10,10,10,10,10])
 		recommended = recommended[:10]
 
-	cur.execute('''
-				SELECT appid,name from games where appid={one} or appid={two} or appid={three} or appid={four} or appid={five}
-				or appid={six} or appid={seven} or appid={eight} or appid={nine} or appid={ten}
-				'''.format(one=recommended[0],two=recommended[1],three=recommended[2],four=recommended[3],five=recommended[4],
-					six=recommended[5], seven=recommended[6], eight=recommended[7], nine=recommended[8], ten=recommended[9],))
+	try:
+		cur.execute('''
+					SELECT appid,name from games where appid={one} or appid={two} or appid={three} or appid={four} or appid={five}
+					or appid={six} or appid={seven} or appid={eight} or appid={nine} or appid={ten}
+					'''.format(one=recommended[0],two=recommended[1],three=recommended[2],four=recommended[3],five=recommended[4],
+						six=recommended[5], seven=recommended[6], eight=recommended[7], nine=recommended[8], ten=recommended[9],))
+	except Exception as e:
+		print("getRecommended",e)
 	rows = cur.fetchall()
 	result = []
 	hashmap = {}
@@ -908,3 +991,69 @@ def getRecommended():
 		D["similarity"] = simValues[i]
 		result.append(D)
 	return result
+
+@app.route('/advanced_search')
+def advanced_search():
+	return render_template('advanced_search.html',user="DEFAULT")
+
+@app.route('/advancedSearchGames',methods=['POST'])
+def advancedSearchGames():
+	if request.method == 'POST':
+		name = request.form.get('name').replace("'","&#39").lower() ###
+		publisher = request.form.get('publisher').replace("'","&#39").lower() ###
+		genre = request.form.get('genre').replace("'","&#39").lower() ###
+		platform = request.form.get('platform').replace("'","&#39").lower() ###
+		price_lessthan_or_equal = request.form.get('price_lessthan_or_equal').replace("'","&#39").lower() ###
+		price_greaterthan_or_equal = request.form.get('price_greaterthan_or_equal').replace("'","&#39").lower() ###
+		selected_tags = request.form.getlist('selected_tags[]')
+		# query = "SELECT name,release_date,appid,price,positive_ratings,negative_ratings FROM games WHERE appid IS NOT NULL AND LOWER(name) LIKE '%"+ searchString +"%' ORDER BY release_date ASC, name ASC OFFSET "+ str((int(page_num)-1)*10) +" ROWS FETCH NEXT 10 ROWS ONLY "
+
+		#first select appids from tags where row has non zero for all the tags in the selected_tags
+		query = ""
+		if len(selected_tags)>0:
+			query = "SELECT games.appid, games.name, games.release_date, games.price, games.positive_ratings, games.negative_ratings FROM games, tags WHERE games.appid=tags.appid "
+			for tag in selected_tags:
+				query += "AND \""+tag+"\" <> 0 "
+		else:
+			query = "SELECT games.appid, games.name, games.release_date, games.price, games.positive_ratings, games.negative_ratings from games WHERE appid IS NOT NULL"
+		
+		if name != '':
+			query += " AND LOWER(name) LIKE '%"+ name +"%'"
+
+		if publisher != '':
+			query += " AND LOWER(publisher) LIKE '%"+ publisher +"%'"
+
+		if genre != '':
+			query += " AND LOWER(genres) LIKE '%"+ genre +"%'"
+
+		if platform != '':
+			query += " AND LOWER(platforms) LIKE '%"+ platform +"%'"
+
+		if price_lessthan_or_equal != '':
+			query += " AND (price::float) <= "+ str(round(float(price_lessthan_or_equal)/93.13, 2))
+
+		if price_greaterthan_or_equal != '':
+			query += " AND (price::float) >= "+ str(round(float(price_greaterthan_or_equal)/93.13, 2))
+
+		try:
+			cur.execute(query)
+			rows = cur.fetchall()
+			games = []
+			for tup in rows:
+				D = {}
+				D["appid"] = tup[0]
+				D["name"] = tup[1]
+				D["release_date"] = tup[2]
+				D["price"] = str(round(float(tup[3])*93.13, 1))+" INR" if float(tup[3])!=0.0 else "FREE" #in inr
+				D["positive_ratings"] = tup[4]
+				D["negative_ratings"] = tup[5]
+				games.append(D)
+			conn.commit()
+			return json.dumps(games)
+		except Exception as e:
+			conn.rollback()
+			print("advanced_search",e)
+			return "Some error occured"
+		
+	else:
+		return "Invalid request"
