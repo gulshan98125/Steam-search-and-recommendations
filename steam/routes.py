@@ -13,8 +13,8 @@ import time
 from datetime import datetime
 
 #conn = psycopg2.connect(user = "postgres",password = "montyhanda",host = "127.0.0.1",port = "5432",database = "proj_temp")
-conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "proj_temp")
-#conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
+#conn = psycopg2.connect(user = "postgres",password = "lhasa",host = "127.0.0.1",port = "5432",database = "steam_project")
+conn = psycopg2.connect(user = "group_24",password = "456-932-282",host = "10.17.50.126",port = "5432",database = "group_24")
 cur = conn.cursor()
 
 cur.execute("select * from tags")
